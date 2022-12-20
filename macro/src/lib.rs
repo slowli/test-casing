@@ -252,11 +252,26 @@ impl fmt::Debug for FunctionWrapper {
 }
 
 impl FunctionWrapper {
+    const MAX_ARGS: usize = 7;
+
     fn new(attrs: CaseAttrs, function: &mut ItemFn) -> syn::Result<Self> {
         if function.sig.inputs.is_empty() {
             let message = "tested function must have at least one input";
             return Err(SynError::new_spanned(&function.sig, message));
+        } else if function.sig.inputs.len() > Self::MAX_ARGS {
+            let message = format!(
+                "tested function must have no more than {} args",
+                Self::MAX_ARGS
+            );
+            return Err(SynError::new_spanned(&function.sig, message));
         }
+
+        let generic_params = &function.sig.generics.params;
+        if !generic_params.is_empty() {
+            let message = "generic tested functions are not supported";
+            return Err(SynError::new_spanned(generic_params, message));
+        }
+
         let mappings = function.sig.inputs.iter_mut().map(|arg| {
             let attrs = match arg {
                 FnArg::Receiver(receiver) => &mut receiver.attrs,
@@ -276,7 +291,10 @@ impl FunctionWrapper {
         let mappings: syn::Result<Vec<_>> = mappings.collect();
         let mappings = mappings?;
 
-        let mut fn_attrs = mem::take(&mut function.attrs);
+        let (retained_attrs, mut fn_attrs) = mem::take(&mut function.attrs)
+            .into_iter()
+            .partition(Self::should_be_retained);
+        function.attrs = retained_attrs;
         let test_attr_position = fn_attrs.iter().position(|attr| attr.path.is_ident("test"));
         if cfg!(feature = "nightly") {
             if let Some(position) = test_attr_position {
@@ -301,6 +319,16 @@ impl FunctionWrapper {
         })
     }
 
+    // FIXME: this is extremely hacky. Ideally, we'd want to partition attrs by their location
+    //   before / after `#[test_casing]`, but this seems impossible on stable Rust (span locations
+    //   are unstable).
+    fn should_be_retained(attr: &Attribute) -> bool {
+        attr.path.is_ident("allow")
+            || attr.path.is_ident("warn")
+            || attr.path.is_ident("deny")
+            || attr.path.is_ident("forbid")
+    }
+
     fn arg_names(&self) -> impl ToTokens {
         let arg_count = self.fn_sig.inputs.len();
         let arg_names = self
@@ -310,10 +338,13 @@ impl FunctionWrapper {
             .enumerate()
             .map(|(i, arg)| match arg {
                 FnArg::Receiver(_) => String::from("self"),
-                FnArg::Typed(PatType { pat, .. }) => match pat.as_ref() {
-                    Pat::Ident(ident) => ident.ident.to_string(),
-                    _ => format!("(arg {i})"),
-                },
+                FnArg::Typed(PatType { pat, .. }) => {
+                    if let Pat::Ident(ident) = pat.as_ref() {
+                        ident.ident.to_string()
+                    } else {
+                        format!("(arg {i})")
+                    }
+                }
             });
         quote! {
             const __ARG_NAMES: [&'static str; #arg_count] = [#(#arg_names,)*];
@@ -321,11 +352,22 @@ impl FunctionWrapper {
     }
 
     fn wrapper(&self) -> impl ToTokens {
+        let cr = quote!(test_casing);
         let name = &self.name;
+        let cases_expr = &self.attrs.expr;
         let arg_names = self.arg_names();
         let index_width = (self.attrs.count - 1).to_string().len();
         let cases = (0..self.attrs.count).map(|i| self.case(i, index_width));
+
         quote! {
+            // Access the iterator to ensure it works even if not building for tests.
+            const _: () = {
+                #[allow(dead_code)]
+                fn __test_cases() {
+                    let _ = #cr::case(#cases_expr, 0);
+                }
+            };
+
             #[cfg(test)]
             mod #name {
                 use super::*;
@@ -392,7 +434,7 @@ impl FunctionWrapper {
         let ret = &self.fn_sig.output;
         let maybe_semicolon = match ret {
             ReturnType::Default => Some(quote!(;)),
-            _ => None,
+            ReturnType::Type { .. } => None,
         };
         let cases_expr = &self.attrs.expr;
 
