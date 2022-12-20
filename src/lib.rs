@@ -1,4 +1,4 @@
-//! Minimalistic framework for generating tests for a set of test cases. In other words,
+//! Minimalistic framework for generating tests for a given set of test cases. In other words,
 //! it implements parameterized tests of reasonably low cardinality for the standard
 //! Rust test runner.
 //!
@@ -15,8 +15,8 @@
 //!
 //! # Intended use cases
 //!
-//! - Since code is generated for each case, their number should be reasonably low
-//!   (roughly speaking, no more than 20).
+//! - Since a separate test wrapper is generated for each case, their number should be
+//!   reasonably low (roughly speaking, no more than 20).
 //! - Isolating each test case makes most sense if the cases involve some heavy lifting
 //!   (spinning up a runtime, logging considerable amount of information, etc.).
 //!

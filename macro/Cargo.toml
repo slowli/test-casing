@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 rust-version = "1.65"
 authors = ["Alex Ostrovski <ostrovski.alex@gmail.com>"]
+readme = "README.md"
 
 [lib]
 proc-macro = true
@@ -15,5 +16,6 @@ syn = { version = "1.0", features = ["full"] }
 
 [features]
 default = []
-# Generates code that uses nightly Rust features (e.g., `#[test_case]` attribute)
+# Uses custom test frameworks APIs together with a generous spicing of hacks
+# to include arguments in the names of the generated tests.
 nightly = []
