@@ -5,6 +5,7 @@ edition = "2021"
 rust-version = "1.65"
 authors = ["Alex Ostrovski <ostrovski.alex@gmail.com>"]
 readme = "README.md"
+license = "MIT OR Apache-2.0"
 
 [lib]
 proc-macro = true
