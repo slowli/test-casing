@@ -3,9 +3,8 @@
 #![cfg_attr(feature = "nightly", feature(test, custom_test_frameworks))]
 
 use async_std::task;
-use rand::{rngs::StdRng, Rng, SeedableRng};
 
-use std::{error::Error, iter};
+use std::error::Error;
 
 use test_casing::{cases, test_casing, Product, TestCases};
 
@@ -18,10 +17,16 @@ fn numbers_are_small(number: i32) {
     assert!((0..10).contains(&number));
 }
 
+#[test]
+fn another_number_is_small() {
+    numbers_are_small(1);
+}
+
+#[allow(unused_variables)] // should be retained on the target fn
 #[test_casing(4, CASES)]
 #[ignore = "testing that `#[ignore]` attr works"]
 fn numbers_are_large(number: i32) {
-    assert!(number > 10);
+    unimplemented!("implement later");
 }
 
 #[test_casing(4, CASES)]
@@ -82,14 +87,23 @@ async fn async_string_conversion(#[map(ref)] s: &str, expected: i32) -> Result<(
     Ok(())
 }
 
-// The library can be used for randomized tests as well, but it's probably not the best choice
-// if the number of test cases should be large.
-const RANDOM_NUMBERS: TestCases<u32> = cases!({
-    let mut rng = StdRng::seed_from_u64(123_456);
-    iter::repeat_with(move || rng.gen())
-});
+// Tests paths to tests in modules.
+mod random {
+    use rand::{rngs::StdRng, Rng, SeedableRng};
 
-#[test_casing(10, RANDOM_NUMBERS)]
-fn randomized_tests(value: u32) {
-    assert!(value.to_string().len() <= 10);
+    use std::iter;
+
+    use test_casing::{cases, test_casing, TestCases};
+
+    // The library can be used for randomized tests as well, but it's probably not the best choice
+    // if the number of test cases should be large.
+    const RANDOM_NUMBERS: TestCases<u32> = cases!({
+        let mut rng = StdRng::seed_from_u64(123_456);
+        iter::repeat_with(move || rng.gen())
+    });
+
+    #[test_casing(10, RANDOM_NUMBERS)]
+    fn randomized_tests(value: u32) {
+        assert!(value.to_string().len() <= 10);
+    }
 }
