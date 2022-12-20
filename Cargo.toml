@@ -1,0 +1,21 @@
+[package]
+name = "test-casing"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.65"
+authors = ["Alex Ostrovski <ostrovski.alex@gmail.com>"]
+
+[dependencies]
+once_cell = "1.16.0"
+test-casing-macro = { version = "0.1.0", path = "macro" }
+
+[dev-dependencies]
+async-std = { version = "1.12.0", features = ["attributes"] }
+rand = "0.8.5"
+
+[features]
+default = []
+nightly = ["test-casing-macro/nightly"]
+
+[workspace]
+members = [".", "macro"]

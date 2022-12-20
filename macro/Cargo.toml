@@ -1,0 +1,19 @@
+[package]
+name = "test-casing-macro"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.65"
+authors = ["Alex Ostrovski <ostrovski.alex@gmail.com>"]
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1.0"
+quote = "1.0"
+syn = { version = "1.0", features = ["full"] }
+
+[features]
+default = []
+# Generates code that uses nightly Rust features (e.g., `#[test_case]` attribute)
+nightly = []
