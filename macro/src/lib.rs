@@ -183,7 +183,7 @@ impl AttrValue {
             Ok(Self::Str(str.clone()))
         } else {
             let message = "unrecognized attribute value; should be a string literal";
-            Err(SynError::new_spanned(nv, message))
+            Err(SynError::new(nv.lit.span(), message))
         }
     }
 }
@@ -258,7 +258,7 @@ impl FunctionWrapper {
 
     fn new(attrs: CaseAttrs, function: &mut ItemFn) -> syn::Result<Self> {
         if function.sig.inputs.is_empty() {
-            let message = "tested function must have at least one input";
+            let message = "tested function must have at least one arg";
             return Err(SynError::new_spanned(&function.sig, message));
         } else if function.sig.inputs.len() > Self::MAX_ARGS {
             let message = format!(

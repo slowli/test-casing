@@ -1,0 +1,5 @@
+error: tested function must have at least one arg
+ --> tests/ui/fn_without_args.rs:4:1
+  |
+4 | fn tested_function() {
+  | ^^^^^^^^^^^^^^^^^^^^

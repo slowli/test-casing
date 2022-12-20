@@ -1,0 +1,11 @@
+error: expected integer literal
+ --> tests/ui/invalid_case_count.rs:3:15
+  |
+3 | #[test_casing("2", ["test", "this"])]
+  |               ^^^
+
+error: number of test cases must be positive
+ --> tests/ui/invalid_case_count.rs:8:15
+  |
+8 | #[test_casing(0, [])]
+  |               ^
