@@ -6,6 +6,10 @@ rust-version = "1.65"
 authors = ["Alex Ostrovski <ostrovski.alex@gmail.com>"]
 readme = "README.md"
 license = "MIT OR Apache-2.0"
+keywords = ["testing", "parameterized", "case"]
+categories = ["development-tools::testing"]
+description = "Procedural macro for `test-casing`"
+repository = "https://github.com/slowli/test-casing"
 
 [lib]
 proc-macro = true

@@ -1,6 +1,12 @@
-# Parameterized Tests with Procedural Code Generation
+# Parameterized Rust Tests with Procedural Code Generation
 
-`test-casing` is a minimalistic framework for generating tests for a given set of test cases.
+[![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%2FApache--2.0-blue)](https://github.com/slowli/test-casing#license)
+![rust 1.65+ required](https://img.shields.io/badge/rust-1.65+-blue.svg?label=Required%20Rust)
+
+**Documentation:**
+[![crate docs (main)](https://img.shields.io/badge/main-yellow.svg?label=docs)](https://slowli.github.io/test-casing/test_casing/)
+
+`test-casing` is a minimalistic Rust framework for generating tests for a given set of test cases.
 In other words, it implements parameterized tests of reasonably low cardinality 
 for the standard Rust test runner.
 
