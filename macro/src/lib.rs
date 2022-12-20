@@ -7,7 +7,9 @@
 //!
 //! [`test-casing`]: https://docs.rs/test-casing/
 
-// Linter settings.
+// Documentation settings
+#![doc(html_root_url = "https://docs.rs/test-casing-macro/0.1.0")]
+// Linter settings
 #![warn(missing_debug_implementations, missing_docs, bare_trait_objects)]
 #![warn(clippy::all, clippy::pedantic)]
 #![allow(clippy::must_use_candidate, clippy::module_name_repetitions)]
@@ -506,7 +508,7 @@ impl FunctionWrapper {
 /// return at least the number of items specified as the first attribute argument, and can
 /// return more items; these additional items will not be tested.
 ///
-/// [`Debug`]: fmt::Debug
+/// [`Debug`]: core::fmt::Debug
 ///
 /// # Mapping arguments
 ///

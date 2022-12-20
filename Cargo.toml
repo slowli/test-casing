@@ -13,7 +13,9 @@ test-casing-macro = { version = "0.1.0", path = "macro" }
 
 [dev-dependencies]
 async-std = { version = "1.12.0", features = ["attributes"] }
+doc-comment = "0.3.3"
 rand = "0.8.5"
+version-sync = "0.9.4"
 
 [features]
 default = []
