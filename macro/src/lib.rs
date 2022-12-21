@@ -426,7 +426,7 @@ impl FunctionWrapper {
         let case_name = format!("case_{index:0>index_width$}");
         let case_name = Ident::new(&case_name, self.name.span());
 
-        let case_fn = self.case_fn(index, &case_name, self.nightly.is_some());
+        let case_fn = self.case_fn(index, &case_name);
         if self.nightly.is_some() {
             let test_fn_name = format!("__TEST_FN_{index}");
             let test_fn_name = Ident::new(&test_fn_name, self.name.span());
@@ -449,7 +449,8 @@ impl FunctionWrapper {
         }
     }
 
-    fn case_fn(&self, index: usize, case_name: &Ident, nightly: bool) -> proc_macro2::TokenStream {
+    fn case_fn(&self, index: usize, case_name: &Ident) -> proc_macro2::TokenStream {
+        let nightly = self.nightly.is_some();
         let cr = quote!(test_casing);
         let name = &self.name;
         let attrs = &self.fn_attrs;

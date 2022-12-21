@@ -83,12 +83,20 @@ fn initializing_fn_wrapper() {
         wrapper.arg_mappings.as_slice(),
         [None, Some(MapAttrs { path: None })]
     );
-    assert_eq!(wrapper.fn_attrs.len(), 2);
-    assert_eq!(
-        wrapper.fn_attrs[0].path.segments.last().unwrap().ident,
-        "test"
-    );
-    assert!(wrapper.fn_attrs[1].path.is_ident("should_panic"));
+
+    if cfg!(feature = "nightly") {
+        assert!(wrapper.fn_attrs.is_empty());
+        let nightly_data = wrapper.nightly.unwrap();
+        assert_matches!(nightly_data.should_panic.unwrap(), AttrValue::Str(_));
+        assert!(nightly_data.ignore.is_none());
+    } else {
+        assert_eq!(wrapper.fn_attrs.len(), 2);
+        assert_eq!(
+            wrapper.fn_attrs[0].path.segments.last().unwrap().ident,
+            "test"
+        );
+        assert!(wrapper.fn_attrs[1].path.is_ident("should_panic"));
+    }
 
     let expected: ItemFn = syn::parse_quote! {
         #[allow(unused)]
@@ -133,12 +141,29 @@ fn computing_case_bindings() {
     assert_eq!(case_args, expected, "{}", quote!(#case_args));
 }
 
+#[cfg(feature = "nightly")]
 #[test]
 fn generating_case() {
-    let mut wrapper = create_wrapper();
-    wrapper.nightly = None;
+    let wrapper = create_wrapper();
     let case_name: Ident = syn::parse_quote!(case0);
-    let case_fn = wrapper.case_fn(0, &case_name, false);
+    let case_fn = wrapper.case_fn(0, &case_name);
+    let case_fn: ItemFn = syn::parse_quote!(#case_fn);
+
+    let expected: ItemFn = syn::parse_quote! {
+        fn case0() {
+            let (__case_arg0, __case_arg1,) = test_casing::case(CASES, 0usize);
+            tested_fn(__case_arg0, &__case_arg1,);
+        }
+    };
+    assert_eq!(case_fn, expected, "{}", quote!(#case_fn));
+}
+
+#[cfg(not(feature = "nightly"))]
+#[test]
+fn generating_case() {
+    let wrapper = create_wrapper();
+    let case_name: Ident = syn::parse_quote!(case0);
+    let case_fn = wrapper.case_fn(0, &case_name);
     let case_fn: ItemFn = syn::parse_quote!(#case_fn);
 
     let expected: ItemFn = syn::parse_quote! {
