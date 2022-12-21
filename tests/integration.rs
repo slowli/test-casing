@@ -107,3 +107,8 @@ mod random {
         assert!(value.to_string().len() <= 10);
     }
 }
+
+#[test]
+fn unit_test_detection_works() {
+    assert!(option_env!("CARGO_TARGET_TMPDIR").is_some());
+}

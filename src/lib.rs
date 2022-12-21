@@ -290,13 +290,9 @@ pub mod nightly {
         }
     }
 
-    // FIXME
-    const fn detect_test_type(_path: &str) -> TestType {
-        TestType::IntegrationTest
-    }
-
     #[doc(hidden)]
     pub fn create_test_description<T: fmt::Debug>(
+        is_unit_test: bool,
         base_name: &'static str,
         arg_names: impl crate::ArgNames<T>,
         cases: impl IntoIterator<Item = T>,
@@ -315,7 +311,11 @@ pub mod nightly {
             should_panic: ShouldPanic::No,
             compile_fail: false,
             no_run: false,
-            test_type: detect_test_type("test"),
+            test_type: if is_unit_test {
+                TestType::UnitTest
+            } else {
+                TestType::IntegrationTest
+            },
         }
     }
 
@@ -347,7 +347,9 @@ pub mod nightly {
             testfn: $test_fn:path
         ) => {
             $crate::nightly::LazyTestCase::new(|| {
+                let is_unit_test = ::core::option_env!("CARGO_TARGET_TMPDIR").is_none();
                 let mut desc = $crate::nightly::create_test_description(
+                    is_unit_test,
                     $base_name,
                     $arg_names,
                     $cases,
@@ -611,5 +613,10 @@ mod tests {
         let booleans = [false, true];
         let cases: HashSet<_> = Product((numbers, strings, booleans)).into_iter().collect();
         assert_eq!(cases.len(), 12); // 3 * 2 * 2
+    }
+
+    #[test]
+    fn unit_test_detection_works() {
+        assert!(option_env!("CARGO_TARGET_TMPDIR").is_none());
     }
 }
