@@ -353,22 +353,33 @@ impl FunctionWrapper {
         }
     }
 
-    fn wrapper(&self) -> impl ToTokens {
+    fn test_cases_iter(&self) -> impl ToTokens {
         let cr = quote!(test_casing);
         let name = &self.name;
         let cases_expr = &self.attrs.expr;
+        let (case_binding, case_args) = self.case_binding();
+
+        quote! {
+            const _: () = {
+                #[allow(dead_code)]
+                fn __test_cases_iterator() {
+                    let #case_binding = #cr::case(#cases_expr, 0);
+                    let _ = #name(#case_args);
+                }
+            };
+        }
+    }
+
+    fn wrapper(&self) -> impl ToTokens {
+        let name = &self.name;
+        let test_cases_iter = self.test_cases_iter();
         let arg_names = self.arg_names();
         let index_width = (self.attrs.count - 1).to_string().len();
         let cases = (0..self.attrs.count).map(|i| self.case(i, index_width));
 
         quote! {
             // Access the iterator to ensure it works even if not building for tests.
-            const _: () = {
-                #[allow(dead_code)]
-                fn __test_cases() {
-                    let _ = #cr::case(#cases_expr, 0);
-                }
-            };
+            #test_cases_iter
 
             #[cfg(test)]
             mod #name {
@@ -439,9 +450,38 @@ impl FunctionWrapper {
             ReturnType::Type { .. } => None,
         };
         let cases_expr = &self.attrs.expr;
+        let (case_binding, case_args) = self.case_binding();
 
-        let (case_binding, case_args) = if self.fn_sig.inputs.len() == 1 {
-            let arg = self.fn_sig.inputs.first().unwrap().span();
+        let case_assignment = if nightly {
+            quote! {
+                let #case_binding = #cr::case(#cases_expr, #index);
+            }
+        } else {
+            quote! {
+                let case = #cr::case(#cases_expr, #index);
+                println!(
+                    "Testing case #{}: {}",
+                    #index,
+                    #cr::ArgNames::print_with_args(__ARG_NAMES, &case)
+                );
+                let #case_binding = case;
+            }
+        };
+
+        quote! {
+            #(#attrs)*
+            #maybe_async fn #case_name() #ret {
+                #case_assignment
+                #name(#case_args) #maybe_await #maybe_semicolon
+            }
+        }
+    }
+
+    /// Returns the binding of args supplied to the test case and potentially mapped args
+    /// to provide to the test function.
+    fn case_binding(&self) -> (impl ToTokens, impl ToTokens) {
+        if self.fn_sig.inputs.len() == 1 {
+            let arg = self.fn_sig.inputs.first().unwrap();
             let arg = Ident::new("case_arg", arg.span());
             let mapped_arg = self.arg_mappings[0]
                 .as_ref()
@@ -460,31 +500,6 @@ impl FunctionWrapper {
             });
             let case_args = quote!(#(#args,)*);
             (case_binding, case_args)
-        };
-
-        let case_assignment = if nightly {
-            quote! {
-                let #case_binding = #cr::case(cases, #index);
-            }
-        } else {
-            quote! {
-                let case = #cr::case(cases, #index);
-                println!(
-                    "Testing case #{}: {}",
-                    #index,
-                    #cr::ArgNames::print_with_args(__ARG_NAMES, &case)
-                );
-                let #case_binding = case;
-            }
-        };
-
-        quote! {
-            #(#attrs)*
-            #maybe_async fn #case_name() #ret {
-                let cases = #cases_expr;
-                #case_assignment
-                #name(#case_args) #maybe_await #maybe_semicolon
-            }
         }
     }
 }
