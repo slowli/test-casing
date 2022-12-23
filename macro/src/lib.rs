@@ -28,6 +28,9 @@ use syn::{
 
 use std::{fmt, mem};
 
+#[cfg(test)]
+mod tests;
+
 struct CaseAttrs {
     count: usize,
     expr: Expr,
@@ -43,7 +46,7 @@ impl fmt::Debug for CaseAttrs {
 }
 
 impl CaseAttrs {
-    fn parse(attr: TokenStream) -> syn::Result<Self> {
+    fn parse(attr: proc_macro2::TokenStream) -> syn::Result<Self> {
         struct CaseAttrsSyntax {
             count: LitInt,
             _comma: Token![,],
@@ -60,7 +63,7 @@ impl CaseAttrs {
             }
         }
 
-        let syntax: CaseAttrsSyntax = syn::parse(attr)?;
+        let syntax: CaseAttrsSyntax = syn::parse2(attr)?;
         let count: usize = syntax.count.base10_parse()?;
         if count == 0 {
             let message = "number of test cases must be positive";
@@ -75,6 +78,15 @@ impl CaseAttrs {
 
 struct MapAttrs {
     path: Option<Path>,
+}
+
+impl fmt::Debug for MapAttrs {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("MapAttrs")
+            .field("path", &self.path.as_ref().map(|_| "_"))
+            .finish()
+    }
 }
 
 impl MapAttrs {
@@ -134,7 +146,7 @@ impl fmt::Debug for AttrValue {
 }
 
 impl AttrValue {
-    fn new(attr: &Attribute, inner_attr: Option<&str>) -> syn::Result<Self> {
+    fn new(attr: &Attribute, expected_field: Option<&str>) -> syn::Result<Self> {
         match attr.parse_meta()? {
             Meta::Path(_) => Ok(Self::Empty),
             Meta::NameValue(MetaNameValue { lit, .. }) => {
@@ -146,8 +158,8 @@ impl AttrValue {
                 }
             }
             Meta::List(list) => {
-                if let Some(inner_attr) = inner_attr {
-                    Self::from_list(list, inner_attr)
+                if let Some(expected_field) = expected_field {
+                    Self::from_list(list, expected_field)
                 } else {
                     let name = attr.path.get_ident().unwrap();
                     let message = format!(
@@ -160,22 +172,22 @@ impl AttrValue {
         }
     }
 
-    fn from_list(list: MetaList, inner_attr: &str) -> syn::Result<Self> {
+    fn from_list(list: MetaList, expected_field: &str) -> syn::Result<Self> {
         let list = list.nested;
         if list.len() != 1 {
             let message =
-                format!("attribute should have a single field `{inner_attr} = \"value\"`");
+                format!("attribute should have a single field `{expected_field} = \"value\"`");
             return Err(SynError::new_spanned(&list, message));
         }
         let NestedMeta::Meta(Meta::NameValue(nv)) = list.first().unwrap() else {
             let message =
-                format!("attribute should have a single field `{inner_attr} = \"value\"`");
+                format!("attribute should have a single field `{expected_field} = \"value\"`");
             return Err(SynError::new_spanned(&list, message));
         };
 
-        if !nv.path.is_ident(inner_attr) {
+        if !nv.path.is_ident(expected_field) {
             let message =
-                format!("attribute should have a single field `{inner_attr} = \"value\"`");
+                format!("attribute should have a single field `{expected_field} = \"value\"`");
             return Err(SynError::new_spanned(&list, message));
         }
 
@@ -183,7 +195,7 @@ impl AttrValue {
             Ok(Self::Str(str.clone()))
         } else {
             let message = "unrecognized attribute value; should be a string literal";
-            Err(SynError::new_spanned(nv, message))
+            Err(SynError::new(nv.lit.span(), message))
         }
     }
 }
@@ -258,7 +270,7 @@ impl FunctionWrapper {
 
     fn new(attrs: CaseAttrs, function: &mut ItemFn) -> syn::Result<Self> {
         if function.sig.inputs.is_empty() {
-            let message = "tested function must have at least one input";
+            let message = "tested function must have at least one arg";
             return Err(SynError::new_spanned(&function.sig, message));
         } else if function.sig.inputs.len() > Self::MAX_ARGS {
             let message = format!(
@@ -353,22 +365,33 @@ impl FunctionWrapper {
         }
     }
 
-    fn wrapper(&self) -> impl ToTokens {
+    fn test_cases_iter(&self) -> impl ToTokens {
         let cr = quote!(test_casing);
         let name = &self.name;
         let cases_expr = &self.attrs.expr;
+        let (case_binding, case_args) = self.case_binding();
+
+        quote! {
+            const _: () = {
+                #[allow(dead_code)]
+                fn __test_cases_iterator() {
+                    let #case_binding = #cr::case(#cases_expr, 0);
+                    let _ = #name(#case_args);
+                }
+            };
+        }
+    }
+
+    fn wrapper(&self) -> impl ToTokens {
+        let name = &self.name;
+        let test_cases_iter = self.test_cases_iter();
         let arg_names = self.arg_names();
         let index_width = (self.attrs.count - 1).to_string().len();
         let cases = (0..self.attrs.count).map(|i| self.case(i, index_width));
 
         quote! {
             // Access the iterator to ensure it works even if not building for tests.
-            const _: () = {
-                #[allow(dead_code)]
-                fn __test_cases() {
-                    let _ = #cr::case(#cases_expr, 0);
-                }
-            };
+            #test_cases_iter
 
             #[cfg(test)]
             mod #name {
@@ -403,7 +426,7 @@ impl FunctionWrapper {
         let case_name = format!("case_{index:0>index_width$}");
         let case_name = Ident::new(&case_name, self.name.span());
 
-        let case_fn = self.case_fn(index, &case_name, self.nightly.is_some());
+        let case_fn = self.case_fn(index, &case_name);
         if self.nightly.is_some() {
             let test_fn_name = format!("__TEST_FN_{index}");
             let test_fn_name = Ident::new(&test_fn_name, self.name.span());
@@ -426,7 +449,8 @@ impl FunctionWrapper {
         }
     }
 
-    fn case_fn(&self, index: usize, case_name: &Ident, nightly: bool) -> proc_macro2::TokenStream {
+    fn case_fn(&self, index: usize, case_name: &Ident) -> proc_macro2::TokenStream {
+        let nightly = self.nightly.is_some();
         let cr = quote!(test_casing);
         let name = &self.name;
         let attrs = &self.fn_attrs;
@@ -439,17 +463,46 @@ impl FunctionWrapper {
             ReturnType::Type { .. } => None,
         };
         let cases_expr = &self.attrs.expr;
+        let (case_binding, case_args) = self.case_binding();
 
-        let (case_binding, case_args) = if self.fn_sig.inputs.len() == 1 {
-            let arg = self.fn_sig.inputs.first().unwrap().span();
-            let arg = Ident::new("case_arg", arg.span());
+        let case_assignment = if nightly {
+            quote! {
+                let #case_binding = #cr::case(#cases_expr, #index);
+            }
+        } else {
+            quote! {
+                let __case = #cr::case(#cases_expr, #index);
+                println!(
+                    "Testing case #{}: {}",
+                    #index,
+                    #cr::ArgNames::print_with_args(__ARG_NAMES, &__case)
+                );
+                let #case_binding = __case;
+            }
+        };
+
+        quote! {
+            #(#attrs)*
+            #maybe_async fn #case_name() #ret {
+                #case_assignment
+                #name(#case_args) #maybe_await #maybe_semicolon
+            }
+        }
+    }
+
+    /// Returns the binding of args supplied to the test case and potentially mapped args
+    /// to provide to the test function.
+    fn case_binding(&self) -> (impl ToTokens, impl ToTokens) {
+        if self.fn_sig.inputs.len() == 1 {
+            let arg = self.fn_sig.inputs.first().unwrap();
+            let arg = Ident::new("__case_arg", arg.span());
             let mapped_arg = self.arg_mappings[0]
                 .as_ref()
                 .map_or_else(|| quote!(#arg), |mapping| mapping.map_arg(&arg));
             (quote!(#arg), mapped_arg)
         } else {
             let args = self.fn_sig.inputs.iter().enumerate();
-            let args = args.map(|(idx, arg)| Ident::new(&format!("case_arg{idx}"), arg.span()));
+            let args = args.map(|(idx, arg)| Ident::new(&format!("__case_arg{idx}"), arg.span()));
             let binding_args = args.clone();
             let case_binding = quote!((#(#binding_args,)*));
 
@@ -460,31 +513,6 @@ impl FunctionWrapper {
             });
             let case_args = quote!(#(#args,)*);
             (case_binding, case_args)
-        };
-
-        let case_assignment = if nightly {
-            quote! {
-                let #case_binding = #cr::case(cases, #index);
-            }
-        } else {
-            quote! {
-                let case = #cr::case(cases, #index);
-                println!(
-                    "Testing case #{}: {}",
-                    #index,
-                    #cr::ArgNames::print_with_args(__ARG_NAMES, &case)
-                );
-                let #case_binding = case;
-            }
-        };
-
-        quote! {
-            #(#attrs)*
-            #maybe_async fn #case_name() #ret {
-                let cases = #cases_expr;
-                #case_assignment
-                #name(#case_args) #maybe_await #maybe_semicolon
-            }
         }
     }
 }
@@ -525,7 +553,7 @@ impl FunctionWrapper {
 /// See `test-casing` crate-level docs for the examples of usage.
 #[proc_macro_attribute]
 pub fn test_casing(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let attrs = match CaseAttrs::parse(attr) {
+    let attrs = match CaseAttrs::parse(attr.into()) {
         Ok(attrs) => attrs,
         Err(err) => return err.into_compile_error().into(),
     };

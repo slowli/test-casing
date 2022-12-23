@@ -1,0 +1,17 @@
+error: expected attribute arguments in parentheses: #[map(...)]
+ --> tests/ui/invalid_mapping.rs:4:20
+  |
+4 | fn tested_function(#[map] _arg: &str) {
+  |                    ^^^^^^
+
+error: unknown map transform; only `ref` is supported
+ --> tests/ui/invalid_mapping.rs:9:32
+  |
+9 | fn other_tested_function(#[map(mut)] _arg: &str) {
+  |                                ^^^
+
+error: expected identifier
+  --> tests/ui/invalid_mapping.rs:14:40
+   |
+14 | fn another_tested_function(#[map(ref = "String::as_str")] _arg: &str) {
+   |                                        ^^^^^^^^^^^^^^^^

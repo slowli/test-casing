@@ -1,0 +1,5 @@
+error: generic tested functions are not supported
+ --> tests/ui-nightly/generic_fn.rs:4:20
+  |
+4 | fn tested_function<S: Into<String>>(_arg: S) {
+  |                    ^^^^^^^^^^^^^^^

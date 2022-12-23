@@ -1,0 +1,5 @@
+error: Item is not supported; use `#[test_cases] on functions
+ --> tests/ui/unsupported_item.rs:4:1
+  |
+4 | struct Dummy;
+  | ^^^^^^^^^^^^^

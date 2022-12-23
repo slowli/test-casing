@@ -19,7 +19,7 @@ Add this to your `Crate.toml`:
 test-casing-macro = "0.1.0"
 ```
 
-Note that the `test-casing` crate re-exports the proc macro. 
+Note that the `test-casing` crate re-exports the proc macro from this crate. 
 Thus, it is rarely necessary to use this crate as a direct dependency.
 
 See `test-casing` docs for more details and examples of usage.

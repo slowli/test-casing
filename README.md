@@ -53,17 +53,58 @@ fn parsing_number(
     assert_eq!(s.parse::<i32>()?, expected);
     Ok(())
 }
+```
 
-// Async test cases are supported as well:
+Other features include the support of async tests and `ignore` / `should_panic`
+attributes (the latter are applied to all generated cases).
+
+```rust
+use test_casing::test_casing;
+
 #[test_casing(4, [2, 3, 5, 8])]
 #[async_std::test]
 // ^ test attribute should be specified below the case spec
 async fn test_async(number: i32) {
     assert!(number < 10);
 }
+
+#[test_casing(3, ["not", "a", "number"])]
+#[should_panic(expected = "ParseIntError")]
+fn parsing_number_errors(s: &str) {
+    s.parse::<i32>().unwrap();
+}
 ```
 
 See the crate docs for more examples of usage.
+
+### Descriptive test case names
+
+With the help of [custom test frameworks] APIs and a generous spicing of hacks,
+the names of generated tests include the values of arguments provided
+to the targeted test function if the `nightly` crate feature is enabled.
+As the name implies, the feature only works on the nightly Rust.
+
+Here's an excerpt of the output of integration tests in this crate to illustrate:
+
+```text
+test cartesian_product::case_6 [number = 5, s = "first"] ... ok
+test cartesian_product::case_9 [number = 8, s = "first"] ... ok
+test number_can_be_converted_to_string::case_0 [number = 2, expected = "2"] ... ok
+test number_can_be_converted_to_string::case_1 [number = 3, expected = "3"] ... ok
+test number_can_be_converted_to_string::case_2 [number = 5, expected = "5"] ... ok
+test number_can_be_converted_to_string_with_tuple_input::case_0 [(arg 0) = (2, "2")] ... ok
+test number_can_be_converted_to_string_with_tuple_input::case_1 [(arg 0) = (3, "3")] ... ok
+test number_can_be_converted_to_string_with_tuple_input::case_2 [(arg 0) = (5, "5")] ... ok
+test numbers_are_large::case_0 [number = 2] ... ignored, testing that `#[ignore]` attr works
+test numbers_are_large::case_1 [number = 3] ... ignored, testing that `#[ignore]` attr works
+test string_conversion_fail::case_0 [bogus_str = "not a number"] - should panic ... ok
+test string_conversion_fail::case_1 [bogus_str = "-"] - should panic ... ok
+test string_conversion_fail::case_2 [bogus_str = ""] - should panic ... ok
+test unit_test_detection_works ... ok
+```
+
+The arguments are a full-fledged part of test names, meaning that they can be included
+into test filters (like `cargo test 'number = 3'`) etc.
 
 ## Alternatives and similar tools
 
@@ -89,6 +130,7 @@ Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in `test-casing` by you, as defined in the Apache-2.0 license,
 shall be dual licensed as above, without any additional terms or conditions.
 
+[custom test frameworks]: https://github.com/rust-lang/rust/issues/50297
 [`test-case`]: https://crates.io/crates/test-case
 [Property testing]: https://crates.io/crates/proptest
 [`quickcheck`]: https://crates.io/crates/quickcheck

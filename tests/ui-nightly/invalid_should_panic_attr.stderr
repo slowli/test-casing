@@ -1,0 +1,11 @@
+error: attribute should have a single field `expected = "value"`
+ --> tests/ui-nightly/invalid_should_panic_attr.rs:4:16
+  |
+4 | #[should_panic(expected = "!", bogus = true)]
+  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: unrecognized attribute value; should be a string literal
+  --> tests/ui-nightly/invalid_should_panic_attr.rs:10:27
+   |
+10 | #[should_panic(expected = 777)]
+   |                           ^^^

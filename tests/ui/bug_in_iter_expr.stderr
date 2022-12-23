@@ -1,0 +1,8 @@
+error[E0425]: cannot find value `CASS` in this scope
+ --> tests/ui/bug_in_iter_expr.rs:5:18
+  |
+3 | const CASES: TestCases<i32> = cases!([1, 2]);
+  | --------------------------------------------- similarly named constant `CASES` defined here
+4 |
+5 | #[test_casing(2, CASS)]
+  |                  ^^^^ help: a constant with a similar name exists: `CASES`
