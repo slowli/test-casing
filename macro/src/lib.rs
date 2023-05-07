@@ -22,8 +22,8 @@ use syn::{
     ext::IdentExt,
     parse::{Error as SynError, Parse, ParseStream},
     spanned::Spanned,
-    Attribute, Expr, FnArg, Ident, Item, ItemFn, Lit, LitInt, Meta, MetaList, MetaNameValue,
-    NestedMeta, Pat, PatType, Path, ReturnType, Signature, Token,
+    Attribute, Expr, ExprLit, FnArg, Ident, Item, ItemFn, Lit, LitInt, Meta, MetaList,
+    MetaNameValue, Pat, PatType, Path, ReturnType, Signature, Token,
 };
 
 use std::{fmt, mem};
@@ -147,11 +147,14 @@ impl fmt::Debug for AttrValue {
 
 impl AttrValue {
     fn new(attr: &Attribute, expected_field: Option<&str>) -> syn::Result<Self> {
-        match attr.parse_meta()? {
+        match &attr.meta {
             Meta::Path(_) => Ok(Self::Empty),
-            Meta::NameValue(MetaNameValue { lit, .. }) => {
-                if let Lit::Str(str) = lit {
-                    Ok(Self::Str(str))
+            Meta::NameValue(MetaNameValue { value, .. }) => {
+                if let Expr::Lit(ExprLit {
+                    lit: Lit::Str(str), ..
+                }) = value
+                {
+                    Ok(Self::Str(str.clone()))
                 } else {
                     let message = "unrecognized attribute value; should be a string literal";
                     Err(SynError::new_spanned(attr, message))
@@ -161,7 +164,7 @@ impl AttrValue {
                 if let Some(expected_field) = expected_field {
                     Self::from_list(list, expected_field)
                 } else {
-                    let name = attr.path.get_ident().unwrap();
+                    let name = attr.meta.path().get_ident().unwrap();
                     let message = format!(
                         "unrecognized attribute shape; should have `#[{name}] or \
                         `#[{name} = \"value\"]` form"
@@ -172,31 +175,27 @@ impl AttrValue {
         }
     }
 
-    fn from_list(list: MetaList, expected_field: &str) -> syn::Result<Self> {
-        let list = list.nested;
-        if list.len() != 1 {
-            let message =
-                format!("attribute should have a single field `{expected_field} = \"value\"`");
-            return Err(SynError::new_spanned(&list, message));
-        }
-        let NestedMeta::Meta(Meta::NameValue(nv)) = list.first().unwrap() else {
-            let message =
-                format!("attribute should have a single field `{expected_field} = \"value\"`");
-            return Err(SynError::new_spanned(&list, message));
-        };
+    fn from_list(list: &MetaList, expected_field: &str) -> syn::Result<Self> {
+        let mut len = 0;
+        let mut value = None;
+        list.parse_nested_meta(|nested| {
+            len += 1;
+            if !nested.path.is_ident(expected_field) {
+                let message =
+                    format!("attribute should have a single field `{expected_field} = \"value\"`");
+                return Err(nested.error(message));
+            }
+            value = Some(nested.value()?.parse::<syn::LitStr>()?);
+            Ok(())
+        })?;
 
-        if !nv.path.is_ident(expected_field) {
+        if len != 1 {
             let message =
                 format!("attribute should have a single field `{expected_field} = \"value\"`");
-            return Err(SynError::new_spanned(&list, message));
+            return Err(SynError::new_spanned(list, message));
         }
-
-        if let Lit::Str(str) = &nv.lit {
-            Ok(Self::Str(str.clone()))
-        } else {
-            let message = "unrecognized attribute value; should be a string literal";
-            Err(SynError::new(nv.lit.span(), message))
-        }
+        let value = value.unwrap();
+        Ok(Self::Str(value))
     }
 }
 
@@ -212,10 +211,10 @@ impl NightlyData {
         let mut should_panic = None;
         let mut indices_to_remove = vec![];
         for (i, attr) in attrs.iter().enumerate() {
-            if attr.path.is_ident("ignore") {
+            if attr.path().is_ident("ignore") {
                 ignore = Some(AttrValue::new(attr, None)?);
                 indices_to_remove.push(i);
-            } else if attr.path.is_ident("should_panic") {
+            } else if attr.path().is_ident("should_panic") {
                 should_panic = Some(AttrValue::new(attr, Some("expected"))?);
                 indices_to_remove.push(i);
             }
@@ -294,7 +293,7 @@ impl FunctionWrapper {
             let map_attr = attrs
                 .iter()
                 .enumerate()
-                .find(|(_, attr)| attr.path.is_ident("map"));
+                .find(|(_, attr)| attr.path().is_ident("map"));
             let Some((idx, map_attr)) = map_attr else {
                 return Ok(None);
             };
@@ -309,7 +308,9 @@ impl FunctionWrapper {
             .into_iter()
             .partition(Self::should_be_retained);
         function.attrs = retained_attrs;
-        let test_attr_position = fn_attrs.iter().position(|attr| attr.path.is_ident("test"));
+        let test_attr_position = fn_attrs
+            .iter()
+            .position(|attr| attr.path().is_ident("test"));
         if cfg!(feature = "nightly") {
             if let Some(position) = test_attr_position {
                 fn_attrs.remove(position);
@@ -337,10 +338,10 @@ impl FunctionWrapper {
     //   before / after `#[test_casing]`, but this seems impossible on stable Rust (span locations
     //   are unstable).
     fn should_be_retained(attr: &Attribute) -> bool {
-        attr.path.is_ident("allow")
-            || attr.path.is_ident("warn")
-            || attr.path.is_ident("deny")
-            || attr.path.is_ident("forbid")
+        attr.path().is_ident("allow")
+            || attr.path().is_ident("warn")
+            || attr.path().is_ident("deny")
+            || attr.path().is_ident("forbid")
     }
 
     fn arg_names(&self) -> impl ToTokens {

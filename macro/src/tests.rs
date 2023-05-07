@@ -92,10 +92,10 @@ fn initializing_fn_wrapper() {
     } else {
         assert_eq!(wrapper.fn_attrs.len(), 2);
         assert_eq!(
-            wrapper.fn_attrs[0].path.segments.last().unwrap().ident,
+            wrapper.fn_attrs[0].path().segments.last().unwrap().ident,
             "test"
         );
-        assert!(wrapper.fn_attrs[1].path.is_ident("should_panic"));
+        assert!(wrapper.fn_attrs[1].path().is_ident("should_panic"));
     }
 
     let expected: ItemFn = syn::parse_quote! {
