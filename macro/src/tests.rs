@@ -3,6 +3,8 @@
 use assert_matches::assert_matches;
 
 use super::*;
+#[cfg(feature = "nightly")]
+use crate::nightly::AttrValue;
 
 #[test]
 fn parsing_case_attrs() {
@@ -47,25 +49,6 @@ fn processing_map_attr_with_path() {
 }
 
 #[test]
-fn extracting_attr_value() {
-    let attr: Attribute = syn::parse_quote!(#[ignore]);
-    let value = AttrValue::new(&attr, None).unwrap();
-    assert_matches!(value, AttrValue::Empty);
-
-    let attr: Attribute = syn::parse_quote!(#[ignore = "TODO"]);
-    let value = AttrValue::new(&attr, None).unwrap();
-    assert_matches!(value, AttrValue::Str(s) if s.value() == "TODO");
-
-    let attr: Attribute = syn::parse_quote!(#[should_panic = "not available"]);
-    let value = AttrValue::new(&attr, Some("expected")).unwrap();
-    assert_matches!(value, AttrValue::Str(s) if s.value() == "not available");
-
-    let attr: Attribute = syn::parse_quote!(#[should_panic(expected = "not available")]);
-    let value = AttrValue::new(&attr, Some("expected")).unwrap();
-    assert_matches!(value, AttrValue::Str(s) if s.value() == "not available");
-}
-
-#[test]
 fn initializing_fn_wrapper() {
     let attrs = CaseAttrs {
         count: 2,
@@ -84,12 +67,15 @@ fn initializing_fn_wrapper() {
         [None, Some(MapAttrs { path: None })]
     );
 
-    if cfg!(feature = "nightly") {
+    #[cfg(feature = "nightly")]
+    {
         assert!(wrapper.fn_attrs.is_empty());
-        let nightly_data = wrapper.nightly.unwrap();
+        let nightly_data = wrapper.nightly;
         assert_matches!(nightly_data.should_panic.unwrap(), AttrValue::Str(_));
         assert!(nightly_data.ignore.is_none());
-    } else {
+    }
+    #[cfg(not(feature = "nightly"))]
+    {
         assert_eq!(wrapper.fn_attrs.len(), 2);
         assert_eq!(
             wrapper.fn_attrs[0].path().segments.last().unwrap().ident,
