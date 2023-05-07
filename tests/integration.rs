@@ -87,6 +87,11 @@ async fn async_string_conversion(#[map(ref)] s: &str, expected: i32) -> Result<(
     Ok(())
 }
 
+#[test]
+fn unit_test_detection_works() {
+    assert!(option_env!("CARGO_TARGET_TMPDIR").is_some());
+}
+
 // Tests paths to tests in modules.
 mod random {
     use rand::{rngs::StdRng, Rng, SeedableRng};
@@ -106,9 +111,4 @@ mod random {
     fn randomized_tests(value: u32) {
         assert!(value.to_string().len() <= 10);
     }
-}
-
-#[test]
-fn unit_test_detection_works() {
-    assert!(option_env!("CARGO_TARGET_TMPDIR").is_some());
 }
