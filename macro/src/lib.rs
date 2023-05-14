@@ -22,14 +22,19 @@ use syn::{
     ext::IdentExt,
     parse::{Error as SynError, Parse, ParseStream},
     spanned::Spanned,
-    Attribute, Expr, FnArg, Ident, Item, ItemFn, Lit, LitInt, Meta, MetaList, MetaNameValue,
-    NestedMeta, Pat, PatType, Path, ReturnType, Signature, Token,
+    Attribute, Expr, FnArg, Ident, Item, ItemFn, LitInt, Pat, PatType, Path, ReturnType, Signature,
+    Token,
 };
 
 use std::{fmt, mem};
 
+#[cfg(feature = "nightly")]
+mod nightly;
 #[cfg(test)]
 mod tests;
+
+#[cfg(feature = "nightly")]
+use self::nightly::NightlyData;
 
 struct CaseAttrs {
     count: usize,
@@ -131,121 +136,9 @@ impl Parse for MapAttrs {
     }
 }
 
-enum AttrValue {
-    Empty,
-    Str(syn::LitStr),
-}
-
-impl fmt::Debug for AttrValue {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Empty => formatter.debug_tuple("Empty").finish(),
-            Self::Str(s) => formatter.debug_tuple("Str").field(&s.value()).finish(),
-        }
-    }
-}
-
-impl AttrValue {
-    fn new(attr: &Attribute, expected_field: Option<&str>) -> syn::Result<Self> {
-        match attr.parse_meta()? {
-            Meta::Path(_) => Ok(Self::Empty),
-            Meta::NameValue(MetaNameValue { lit, .. }) => {
-                if let Lit::Str(str) = lit {
-                    Ok(Self::Str(str))
-                } else {
-                    let message = "unrecognized attribute value; should be a string literal";
-                    Err(SynError::new_spanned(attr, message))
-                }
-            }
-            Meta::List(list) => {
-                if let Some(expected_field) = expected_field {
-                    Self::from_list(list, expected_field)
-                } else {
-                    let name = attr.path.get_ident().unwrap();
-                    let message = format!(
-                        "unrecognized attribute shape; should have `#[{name}] or \
-                        `#[{name} = \"value\"]` form"
-                    );
-                    Err(SynError::new_spanned(attr, message))
-                }
-            }
-        }
-    }
-
-    fn from_list(list: MetaList, expected_field: &str) -> syn::Result<Self> {
-        let list = list.nested;
-        if list.len() != 1 {
-            let message =
-                format!("attribute should have a single field `{expected_field} = \"value\"`");
-            return Err(SynError::new_spanned(&list, message));
-        }
-        let NestedMeta::Meta(Meta::NameValue(nv)) = list.first().unwrap() else {
-            let message =
-                format!("attribute should have a single field `{expected_field} = \"value\"`");
-            return Err(SynError::new_spanned(&list, message));
-        };
-
-        if !nv.path.is_ident(expected_field) {
-            let message =
-                format!("attribute should have a single field `{expected_field} = \"value\"`");
-            return Err(SynError::new_spanned(&list, message));
-        }
-
-        if let Lit::Str(str) = &nv.lit {
-            Ok(Self::Str(str.clone()))
-        } else {
-            let message = "unrecognized attribute value; should be a string literal";
-            Err(SynError::new(nv.lit.span(), message))
-        }
-    }
-}
-
-#[derive(Debug)]
-struct NightlyData {
-    ignore: Option<AttrValue>,
-    should_panic: Option<AttrValue>,
-}
-
-impl NightlyData {
-    fn from_attrs(attrs: &mut Vec<Attribute>) -> syn::Result<Self> {
-        let mut ignore = None;
-        let mut should_panic = None;
-        let mut indices_to_remove = vec![];
-        for (i, attr) in attrs.iter().enumerate() {
-            if attr.path.is_ident("ignore") {
-                ignore = Some(AttrValue::new(attr, None)?);
-                indices_to_remove.push(i);
-            } else if attr.path.is_ident("should_panic") {
-                should_panic = Some(AttrValue::new(attr, Some("expected"))?);
-                indices_to_remove.push(i);
-            }
-        }
-
-        for i in indices_to_remove.into_iter().rev() {
-            attrs.remove(i);
-        }
-        Ok(Self {
-            ignore,
-            should_panic,
-        })
-    }
-
-    fn macro_args(&self) -> impl ToTokens {
-        let option = quote!(::core::option::Option);
-        let ignore = self.ignore.as_ref().map(|ignore| match ignore {
-            AttrValue::Empty => quote!(ignore: #option::None,),
-            AttrValue::Str(s) => quote!(ignore: #option::Some(#s),),
-        });
-        let should_panic = self.should_panic.as_ref().map(|panic| match panic {
-            AttrValue::Empty => quote!(panic_message: #option::None,),
-            AttrValue::Str(s) => quote!(panic_message: #option::Some(#s),),
-        });
-        quote! { #ignore #should_panic }
-    }
-}
-
 struct FunctionWrapper {
-    nightly: Option<NightlyData>,
+    #[cfg(feature = "nightly")]
+    nightly: NightlyData,
     name: Ident,
     attrs: CaseAttrs,
     fn_attrs: Vec<Attribute>,
@@ -257,7 +150,6 @@ impl fmt::Debug for FunctionWrapper {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("FunctionWrapper")
-            .field("nightly", &self.nightly)
             .field("attrs", &self.attrs)
             .field("name", &self.name)
             .field("fn_attrs_len", &self.fn_attrs.len())
@@ -294,7 +186,7 @@ impl FunctionWrapper {
             let map_attr = attrs
                 .iter()
                 .enumerate()
-                .find(|(_, attr)| attr.path.is_ident("map"));
+                .find(|(_, attr)| attr.path().is_ident("map"));
             let Some((idx, map_attr)) = map_attr else {
                 return Ok(None);
             };
@@ -309,7 +201,9 @@ impl FunctionWrapper {
             .into_iter()
             .partition(Self::should_be_retained);
         function.attrs = retained_attrs;
-        let test_attr_position = fn_attrs.iter().position(|attr| attr.path.is_ident("test"));
+        let test_attr_position = fn_attrs
+            .iter()
+            .position(|attr| attr.path().is_ident("test"));
         if cfg!(feature = "nightly") {
             if let Some(position) = test_attr_position {
                 fn_attrs.remove(position);
@@ -320,11 +214,8 @@ impl FunctionWrapper {
         }
 
         Ok(Self {
-            nightly: if cfg!(feature = "nightly") {
-                Some(NightlyData::from_attrs(&mut fn_attrs)?)
-            } else {
-                None
-            },
+            #[cfg(feature = "nightly")]
+            nightly: NightlyData::from_attrs(&mut fn_attrs)?,
             name: function.sig.ident.clone(),
             attrs,
             fn_attrs,
@@ -337,10 +228,10 @@ impl FunctionWrapper {
     //   before / after `#[test_casing]`, but this seems impossible on stable Rust (span locations
     //   are unstable).
     fn should_be_retained(attr: &Attribute) -> bool {
-        attr.path.is_ident("allow")
-            || attr.path.is_ident("warn")
-            || attr.path.is_ident("deny")
-            || attr.path.is_ident("forbid")
+        attr.path().is_ident("allow")
+            || attr.path().is_ident("warn")
+            || attr.path().is_ident("deny")
+            || attr.path().is_ident("forbid")
     }
 
     fn arg_names(&self) -> impl ToTokens {
@@ -402,17 +293,30 @@ impl FunctionWrapper {
         }
     }
 
+    #[cfg(feature = "nightly")]
     fn declare_test_case(&self, index: usize, test_fn_name: &Ident) -> impl ToTokens {
         let cr = quote!(test_casing);
         let cases_expr = &self.attrs.expr;
         let test_case_name = format!("__TEST_CASE_{index}");
         let test_case_name = Ident::new(&test_case_name, self.name.span());
-        let additional_args = self.nightly.as_ref().unwrap().macro_args();
+        let additional_args = self.nightly.macro_args();
+
+        let span_start = self.name.span().start();
+        let start_line = span_start.line;
+        let start_col = span_start.column;
+        let span_end = self.name.span().end();
+        let end_line = span_end.line;
+        let end_col = span_end.column;
 
         quote! {
             #[::core::prelude::v1::test_case]
             static #test_case_name: #cr::nightly::LazyTestCase = #cr::declare_test_case!(
                 base_name: ::core::module_path!(),
+                source_file: ::core::file!(),
+                start_line: #start_line,
+                start_col: #start_col,
+                end_line: #end_line,
+                end_col: #end_col,
                 arg_names: __ARG_NAMES,
                 cases: #cases_expr,
                 index: #index,
@@ -426,8 +330,9 @@ impl FunctionWrapper {
         let case_name = format!("case_{index:0>index_width$}");
         let case_name = Ident::new(&case_name, self.name.span());
 
-        let case_fn = self.case_fn(index, &case_name);
-        if self.nightly.is_some() {
+        #[cfg(feature = "nightly")]
+        {
+            let case_fn = self.case_fn(index, &case_name);
             let test_fn_name = format!("__TEST_FN_{index}");
             let test_fn_name = Ident::new(&test_fn_name, self.name.span());
             let ret = &self.fn_sig.output;
@@ -444,13 +349,13 @@ impl FunctionWrapper {
                 };
                 #case_decl
             }
-        } else {
-            case_fn
         }
+
+        #[cfg(not(feature = "nightly"))]
+        self.case_fn(index, &case_name)
     }
 
     fn case_fn(&self, index: usize, case_name: &Ident) -> proc_macro2::TokenStream {
-        let nightly = self.nightly.is_some();
         let cr = quote!(test_casing);
         let name = &self.name;
         let attrs = &self.fn_attrs;
@@ -465,7 +370,7 @@ impl FunctionWrapper {
         let cases_expr = &self.attrs.expr;
         let (case_binding, case_args) = self.case_binding();
 
-        let case_assignment = if nightly {
+        let case_assignment = if cfg!(feature = "nightly") {
             quote! {
                 let #case_binding = #cr::case(#cases_expr, #index);
             }

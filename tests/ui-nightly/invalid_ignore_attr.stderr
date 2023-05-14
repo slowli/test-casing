@@ -1,8 +1,8 @@
-error: expected `,`
- --> tests/ui-nightly/invalid_ignore_attr.rs:4:15
+error: unrecognized attribute shape; should have `#[ignore] or `#[ignore = "value"]` form
+ --> tests/ui-nightly/invalid_ignore_attr.rs:4:1
   |
 4 | #[ignore(_arg > 1)]
-  |               ^
+  | ^^^^^^^^^^^^^^^^^^^
 
 error: unrecognized attribute shape; should have `#[ignore] or `#[ignore = "value"]` form
   --> tests/ui-nightly/invalid_ignore_attr.rs:10:1

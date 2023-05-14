@@ -1,8 +1,8 @@
 error: expected attribute arguments in parentheses: #[map(...)]
- --> tests/ui/invalid_mapping.rs:4:20
+ --> tests/ui/invalid_mapping.rs:4:22
   |
 4 | fn tested_function(#[map] _arg: &str) {
-  |                    ^^^^^^
+  |                      ^^^
 
 error: unknown map transform; only `ref` is supported
  --> tests/ui/invalid_mapping.rs:9:32

@@ -62,6 +62,11 @@ pub fn create_test_description<T: fmt::Debug>(
         name: TestName::DynTestName(format!("{path_in_crate}::case_{index} [{description}]")),
         ignore: false,
         ignore_message: None,
+        source_file: "",
+        start_line: 0,
+        start_col: 0,
+        end_line: 0,
+        end_col: 0,
         should_panic: ShouldPanic::No,
         compile_fail: false,
         no_run: false,
@@ -71,6 +76,21 @@ pub fn create_test_description<T: fmt::Debug>(
             TestType::IntegrationTest
         },
     }
+}
+
+pub fn set_location(
+    desc: &mut TestDesc,
+    source_file: &'static str,
+    start_line: usize,
+    start_col: usize,
+    end_line: usize,
+    end_col: usize,
+) {
+    desc.source_file = source_file;
+    desc.start_line = start_line;
+    desc.start_col = start_col;
+    desc.end_line = end_line;
+    desc.end_col = end_col;
 }
 
 pub fn set_ignore(desc: &mut TestDesc, message: Option<&'static str>) {
@@ -93,6 +113,11 @@ pub fn set_should_panic(desc: &mut TestDesc, message: Option<&'static str>) {
 macro_rules! declare_test_case {
     (
         base_name: $base_name:expr,
+        source_file: $source_file:expr,
+        start_line: $start_line:expr,
+        start_col: $start_col:expr,
+        end_line: $end_line:expr,
+        end_col: $end_col:expr,
         arg_names: $arg_names:expr,
         cases: $cases:expr,
         index: $test_index:expr,
@@ -108,6 +133,14 @@ macro_rules! declare_test_case {
                 $arg_names,
                 $cases,
                 $test_index,
+            );
+            $crate::nightly::set_location(
+                &mut desc,
+                $source_file,
+                $start_line,
+                $start_col,
+                $end_line,
+                $end_col,
             );
             $(
             $crate::nightly::set_ignore(&mut desc, $ignore);
