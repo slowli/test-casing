@@ -243,9 +243,12 @@ use std::{fmt, iter::Fuse};
 
 pub use test_casing_macro::test_casing;
 
+mod decorators;
 #[cfg(feature = "nightly")]
 #[doc(hidden)] // used by the `#[test_casing]` macro; logically private
 pub mod nightly;
+
+pub use crate::decorators::{DecorateTest, Retry, RetryErrors, Sequence, TestFn, Timeout};
 
 /// Obtains a test case from an iterator.
 #[doc(hidden)] // used by the `#[test_casing]` macro; logically private
