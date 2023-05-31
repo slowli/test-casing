@@ -67,7 +67,6 @@ impl<R: Send + 'static> DecorateTest<R> for Timeout {
     }
 }
 
-// FIXME: make Retry(1) mean "1 retry" (= 2 attempts)
 #[derive(Debug)]
 pub struct Retry(pub usize);
 
@@ -80,7 +79,7 @@ impl Retry {
     }
 
     fn handle_panic(&self, attempt: usize, panic_object: Box<dyn Any + Send>) {
-        if attempt + 1 < self.0 {
+        if attempt < self.0 {
             let panic_str = extract_panic_str(&panic_object).unwrap_or("");
             let punctuation = if panic_str.is_empty() { "" } else { ": " };
             println!("Test attempt #{attempt} panicked{punctuation}{panic_str}");
@@ -94,12 +93,12 @@ impl Retry {
         test_fn: impl TestFn<Result<(), E>>,
         should_retry: fn(&E) -> bool,
     ) -> Result<(), E> {
-        for attempt in 0..self.0 {
+        for attempt in 0..=self.0 {
             println!("Test attempt #{attempt}");
             match panic::catch_unwind(test_fn) {
                 Ok(Ok(())) => return Ok(()),
                 Ok(Err(err)) => {
-                    if attempt + 1 < self.0 && should_retry(&err) {
+                    if attempt < self.0 && should_retry(&err) {
                         println!("Test attempt #{attempt} errored: {err}");
                     } else {
                         return Err(err);
@@ -116,7 +115,7 @@ impl Retry {
 
 impl DecorateTest<()> for Retry {
     fn decorate_and_test<F: TestFn<()>>(&self, test_fn: F) {
-        for attempt in 0..self.0 {
+        for attempt in 0..=self.0 {
             println!("Test attempt #{attempt}");
             match panic::catch_unwind(test_fn) {
                 Ok(()) => break,
@@ -268,7 +267,7 @@ mod tests {
     }
 
     const RETRY: RetryErrors<io::Error> =
-        Retry(3).on_error(|err| matches!(err.kind(), io::ErrorKind::AddrInUse));
+        Retry(2).on_error(|err| matches!(err.kind(), io::ErrorKind::AddrInUse));
 
     #[test]
     fn retrying_on_error() {
@@ -348,31 +347,40 @@ mod tests {
         SEQUENCE.decorate_and_test(second_test);
     }
 
-    fn test_fn() -> Result<(), &'static str> {
-        static TEST_COUNTER: AtomicU32 = AtomicU32::new(0);
-        match TEST_COUNTER.fetch_add(1, Ordering::Relaxed) {
-            0 => {
-                thread::sleep(Duration::from_secs(1));
-                Ok(())
+    // We need independent test counters for different tests, hence defining a function
+    // via a macro.
+    macro_rules! define_test_fn {
+        () => {
+            fn test_fn() -> Result<(), &'static str> {
+                static TEST_COUNTER: AtomicU32 = AtomicU32::new(0);
+                match TEST_COUNTER.fetch_add(1, Ordering::Relaxed) {
+                    0 => {
+                        thread::sleep(Duration::from_secs(1));
+                        Ok(())
+                    }
+                    1 => Err("oops"),
+                    2 => Ok(()),
+                    _ => unreachable!(),
+                }
             }
-            1 => Err("oops"),
-            2 => Ok(()),
-            _ => unreachable!(),
-        }
+        };
     }
 
     #[test]
     fn composing_decorators() {
-        const DECORATORS: (Retry, Timeout) = (Retry(3), Timeout(Duration::from_millis(100)));
+        define_test_fn!();
 
-        let test_fn: fn() -> Result<(), &'static str> = test_fn;
+        const DECORATORS: (Retry, Timeout) = (Retry(2), Timeout(Duration::from_millis(100)));
+
         DECORATORS.decorate_and_test(test_fn).unwrap();
     }
 
     #[test]
     fn making_decorator_into_trait_object() {
+        define_test_fn!();
+
         static DECORATORS: &dyn DecorateTestFn<Result<(), &'static str>> =
-            &(Retry(3), Timeout(Duration::from_millis(100)));
+            &(Retry(2), Timeout(Duration::from_millis(100)));
 
         DECORATORS.decorate_and_test_fn(test_fn).unwrap();
     }
