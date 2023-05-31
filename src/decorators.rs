@@ -42,6 +42,16 @@ impl<R: 'static, T: DecorateTest<R>> DecorateTestFn<R> for T {
 #[derive(Debug, Clone, Copy)]
 pub struct Timeout(pub Duration);
 
+impl Timeout {
+    pub const fn secs(secs: u64) -> Self {
+        Self(Duration::from_secs(secs))
+    }
+
+    pub const fn millis(millis: u64) -> Self {
+        Self(Duration::from_millis(millis))
+    }
+}
+
 impl<R: Send + 'static> DecorateTest<R> for Timeout {
     #[allow(clippy::similar_names)]
     fn decorate_and_test<F: TestFn<R>>(&self, test_fn: F) -> R {
@@ -68,9 +78,24 @@ impl<R: Send + 'static> DecorateTest<R> for Timeout {
 }
 
 #[derive(Debug)]
-pub struct Retry(pub usize);
+pub struct Retry {
+    times: usize,
+    delay: Duration,
+}
 
 impl Retry {
+    pub const fn times(times: usize) -> Self {
+        Self {
+            times,
+            delay: Duration::ZERO,
+        }
+    }
+
+    #[must_use]
+    pub const fn with_delay(self, delay: Duration) -> Self {
+        Self { delay, ..self }
+    }
+
     pub const fn on_error<E>(self, matcher: fn(&E) -> bool) -> RetryErrors<E> {
         RetryErrors {
             inner: self,
@@ -79,7 +104,7 @@ impl Retry {
     }
 
     fn handle_panic(&self, attempt: usize, panic_object: Box<dyn Any + Send>) {
-        if attempt < self.0 {
+        if attempt < self.times {
             let panic_str = extract_panic_str(&panic_object).unwrap_or("");
             let punctuation = if panic_str.is_empty() { "" } else { ": " };
             println!("Test attempt #{attempt} panicked{punctuation}{panic_str}");
@@ -93,12 +118,12 @@ impl Retry {
         test_fn: impl TestFn<Result<(), E>>,
         should_retry: fn(&E) -> bool,
     ) -> Result<(), E> {
-        for attempt in 0..=self.0 {
+        for attempt in 0..=self.times {
             println!("Test attempt #{attempt}");
             match panic::catch_unwind(test_fn) {
                 Ok(Ok(())) => return Ok(()),
                 Ok(Err(err)) => {
-                    if attempt < self.0 && should_retry(&err) {
+                    if attempt < self.times && should_retry(&err) {
                         println!("Test attempt #{attempt} errored: {err}");
                     } else {
                         return Err(err);
@@ -108,6 +133,9 @@ impl Retry {
                     self.handle_panic(attempt, panic_object);
                 }
             }
+            if self.delay > Duration::ZERO {
+                thread::sleep(self.delay);
+            }
         }
         Ok(())
     }
@@ -115,13 +143,16 @@ impl Retry {
 
 impl DecorateTest<()> for Retry {
     fn decorate_and_test<F: TestFn<()>>(&self, test_fn: F) {
-        for attempt in 0..=self.0 {
+        for attempt in 0..=self.times {
             println!("Test attempt #{attempt}");
             match panic::catch_unwind(test_fn) {
                 Ok(()) => break,
                 Err(panic_object) => {
                     self.handle_panic(attempt, panic_object);
                 }
+            }
+            if self.delay > Duration::ZERO {
+                thread::sleep(self.delay);
             }
         }
     }
@@ -256,7 +287,11 @@ impl_decorate_test_for_tuple!(a: A, b: B, c: C, d: D, e: E, f: F, g: G => h: H);
 mod tests {
     use std::{
         io,
-        sync::atomic::{AtomicU32, Ordering},
+        sync::{
+            atomic::{AtomicU32, Ordering},
+            Mutex,
+        },
+        time::Instant,
     };
 
     use super::*;
@@ -270,8 +305,28 @@ mod tests {
         TIMEOUT.decorate_and_test(test_fn);
     }
 
+    #[test]
+    fn retrying_with_delay() {
+        const RETRY: Retry = Retry::times(1).with_delay(Duration::from_millis(100));
+
+        fn test_fn() -> Result<(), &'static str> {
+            static TEST_START: Mutex<Option<Instant>> = Mutex::new(None);
+
+            let mut test_start = TEST_START.lock().unwrap();
+            if let Some(test_start) = *test_start {
+                assert!(test_start.elapsed() > RETRY.delay);
+                Ok(())
+            } else {
+                *test_start = Some(Instant::now());
+                Err("come again?")
+            }
+        }
+
+        RETRY.decorate_and_test(test_fn).unwrap();
+    }
+
     const RETRY: RetryErrors<io::Error> =
-        Retry(2).on_error(|err| matches!(err.kind(), io::ErrorKind::AddrInUse));
+        Retry::times(2).on_error(|err| matches!(err.kind(), io::ErrorKind::AddrInUse));
 
     #[test]
     fn retrying_on_error() {
@@ -374,7 +429,7 @@ mod tests {
     fn composing_decorators() {
         define_test_fn!();
 
-        const DECORATORS: (Timeout, Retry) = (Timeout(Duration::from_millis(100)), Retry(2));
+        const DECORATORS: (Timeout, Retry) = (Timeout(Duration::from_millis(100)), Retry::times(2));
 
         DECORATORS.decorate_and_test(test_fn).unwrap();
     }
@@ -384,7 +439,7 @@ mod tests {
         define_test_fn!();
 
         static DECORATORS: &dyn DecorateTestFn<Result<(), &'static str>> =
-            &(Timeout(Duration::from_millis(100)), Retry(2));
+            &(Timeout(Duration::from_millis(100)), Retry::times(2));
 
         DECORATORS.decorate_and_test_fn(test_fn).unwrap();
     }

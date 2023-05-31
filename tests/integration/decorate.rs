@@ -28,13 +28,13 @@ fn with_timeout_constant() {
 }
 
 #[test]
-#[decorate(TIMEOUT, Retry(2))]
+#[decorate(TIMEOUT, Retry::times(2))]
 fn with_mixed_decorators() {
     thread::sleep(Duration::from_millis(10));
 }
 
 #[test]
-#[decorate(Retry(1))]
+#[decorate(Retry::times(1))]
 fn with_retries() {
     static COUNTER: AtomicU32 = AtomicU32::new(0);
 
@@ -44,7 +44,7 @@ fn with_retries() {
 }
 
 #[test]
-#[decorate(Retry(1))]
+#[decorate(Retry::times(1))]
 fn with_retries_and_error() -> Result<(), Box<dyn Error>> {
     static COUNTER: AtomicU32 = AtomicU32::new(0);
 
@@ -56,7 +56,7 @@ fn with_retries_and_error() -> Result<(), Box<dyn Error>> {
 }
 
 const RETRY_ERRORS: RetryErrors<Box<dyn Error>> =
-    Retry(1).on_error(|err| err.to_string().contains("retry"));
+    Retry::times(1).on_error(|err| err.to_string().contains("retry"));
 
 #[test]
 #[decorate(RETRY_ERRORS)]
@@ -97,7 +97,7 @@ fn mismatched_error_with_error_retries() -> Result<(), Box<dyn Error>> {
 }
 
 #[test]
-#[decorate(ShouldError("oops"), Retry(2))]
+#[decorate(ShouldError("oops"), Retry::times(2))]
 fn with_custom_decorator_and_retries() -> Result<(), &'static str> {
     static COUNTER: AtomicU32 = AtomicU32::new(0);
 
@@ -110,7 +110,7 @@ fn with_custom_decorator_and_retries() -> Result<(), &'static str> {
 
 #[test]
 #[decorate(ShouldError("oops"))]
-#[decorate(Retry(2))]
+#[decorate(Retry::times(2))]
 fn with_several_decorator_macros() -> Result<(), &'static str> {
     static COUNTER: AtomicU32 = AtomicU32::new(0);
 
@@ -122,7 +122,7 @@ fn with_several_decorator_macros() -> Result<(), &'static str> {
 }
 
 #[async_std::test]
-#[decorate(Timeout(Duration::from_millis(100)), Retry(1))]
+#[decorate(Timeout(Duration::from_millis(100)), Retry::times(1))]
 async fn async_test_with_timeout() {
     static COUNTER: AtomicU32 = AtomicU32::new(0);
 
@@ -188,7 +188,7 @@ fn other_sequential_test() {
 }
 
 #[async_std::test]
-#[decorate(Retry(1), &SEQUENCE)]
+#[decorate(Retry::times(1), &SEQUENCE)]
 async fn async_sequential_test() -> Result<(), Box<dyn Error>> {
     static COUNTER: AtomicU32 = AtomicU32::new(0);
 
@@ -202,7 +202,7 @@ async fn async_sequential_test() -> Result<(), Box<dyn Error>> {
 }
 
 #[test_casing(3, ["1", "2", "3!"])]
-#[decorate(Retry(1))]
+#[decorate(Retry::times(1))]
 fn cases_with_retries(s: &str) {
     // This is sloppy (the test case ordering is non-deterministic, so we can skip starting cases),
     // but sort of OK for the purpose.
