@@ -91,13 +91,13 @@ impl<E: ToString> DecorateTest<Result<(), E>> for ShouldError {
 }
 
 #[test]
-#[decorate(ShouldError("oops"), RETRY_ERRORS)] // also tests custom decorators
+#[decorate(RETRY_ERRORS, ShouldError("oops"))] // also tests custom decorators
 fn mismatched_error_with_error_retries() -> Result<(), Box<dyn Error>> {
     Err("oops".into())
 }
 
 #[test]
-#[decorate(Retry(2), ShouldError("oops"))]
+#[decorate(ShouldError("oops"), Retry(2))]
 fn with_custom_decorator_and_retries() -> Result<(), &'static str> {
     static COUNTER: AtomicU32 = AtomicU32::new(0);
 
@@ -122,7 +122,7 @@ fn with_several_decorator_macros() -> Result<(), &'static str> {
 }
 
 #[async_std::test]
-#[decorate(Retry(1), Timeout(Duration::from_millis(100)))]
+#[decorate(Timeout(Duration::from_millis(100)), Retry(1))]
 async fn async_test_with_timeout() {
     static COUNTER: AtomicU32 = AtomicU32::new(0);
 
@@ -188,7 +188,7 @@ fn other_sequential_test() {
 }
 
 #[async_std::test]
-#[decorate(&SEQUENCE, Retry(1))]
+#[decorate(Retry(1), &SEQUENCE)]
 async fn async_sequential_test() -> Result<(), Box<dyn Error>> {
     static COUNTER: AtomicU32 = AtomicU32::new(0);
 

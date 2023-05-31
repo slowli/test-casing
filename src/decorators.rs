@@ -225,28 +225,32 @@ impl<E: 'static> DecorateTest<Result<(), E>> for Sequence {
     }
 }
 
-// TODO: use direct ordering of decorators?
 macro_rules! impl_decorate_test_for_tuple {
-    ($($field:ident : $ty:ident),+ => $($layer:ident),* => $final:ident) => {
-        impl<R, $($ty,)+> DecorateTest<R> for ($($ty,)+)
+    ($($field:ident : $ty:ident),* => $last_field:ident : $last_ty:ident) => {
+        impl<R, $($ty,)* $last_ty> DecorateTest<R> for ($($ty,)* $last_ty,)
         where
-            $($ty: DecorateTest<R>,)+
+            $($ty: DecorateTest<R>,)*
+            $last_ty: DecorateTest<R>,
         {
-            fn decorate_and_test<F: TestFn<R>>(&'static self, test_fn: F) -> R {
-                let ($($field,)+) = self;
+            fn decorate_and_test<Fn: TestFn<R>>(&'static self, test_fn: Fn) -> R {
+                let ($($field,)* $last_field,) = self;
                 $(
-                let test_fn = move || $layer.decorate_and_test(test_fn);
+                let test_fn = move || $field.decorate_and_test(test_fn);
                 )*
-                $final.decorate_and_test(test_fn)
+                $last_field.decorate_and_test(test_fn)
             }
         }
     };
 }
 
-impl_decorate_test_for_tuple!(a: A => => a);
-impl_decorate_test_for_tuple!(a: A, b: B => b => a);
-impl_decorate_test_for_tuple!(a: A, b: B, c: C => c, b => a);
-impl_decorate_test_for_tuple!(a: A, b: B, c: C, d: D => d, c, b => a);
+impl_decorate_test_for_tuple!(=> a: A);
+impl_decorate_test_for_tuple!(a: A => b: B);
+impl_decorate_test_for_tuple!(a: A, b: B => c: C);
+impl_decorate_test_for_tuple!(a: A, b: B, c: C => d: D);
+impl_decorate_test_for_tuple!(a: A, b: B, c: C, d: D => e: E);
+impl_decorate_test_for_tuple!(a: A, b: B, c: C, d: D, e: E => f: F);
+impl_decorate_test_for_tuple!(a: A, b: B, c: C, d: D, e: E, f: F => g: G);
+impl_decorate_test_for_tuple!(a: A, b: B, c: C, d: D, e: E, f: F, g: G => h: H);
 
 #[cfg(test)]
 mod tests {
@@ -370,7 +374,7 @@ mod tests {
     fn composing_decorators() {
         define_test_fn!();
 
-        const DECORATORS: (Retry, Timeout) = (Retry(2), Timeout(Duration::from_millis(100)));
+        const DECORATORS: (Timeout, Retry) = (Timeout(Duration::from_millis(100)), Retry(2));
 
         DECORATORS.decorate_and_test(test_fn).unwrap();
     }
@@ -380,7 +384,7 @@ mod tests {
         define_test_fn!();
 
         static DECORATORS: &dyn DecorateTestFn<Result<(), &'static str>> =
-            &(Retry(2), Timeout(Duration::from_millis(100)));
+            &(Timeout(Duration::from_millis(100)), Retry(2));
 
         DECORATORS.decorate_and_test_fn(test_fn).unwrap();
     }
