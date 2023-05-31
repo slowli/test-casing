@@ -1,7 +1,5 @@
 //! Test decorator trait and implementations.
 
-#![allow(missing_docs)] // FIXME
-
 use std::{
     any::Any,
     fmt, panic,
@@ -13,11 +11,122 @@ use std::{
     time::Duration,
 };
 
+/// Tested function or closure.
+///
+/// This trait is automatically implemented for all functions without arguments.
 pub trait TestFn<R>: Fn() -> R + panic::UnwindSafe + Send + Sync + Copy + 'static {}
 
 impl<R, F> TestFn<R> for F where F: Fn() -> R + panic::UnwindSafe + Send + Sync + Copy + 'static {}
 
+/// Test decorator.
+///
+/// A decorator takes a [tested function](TestFn) and calls it zero or more times, perhaps
+/// with additional logic spliced between calls. Examples of decorators include [retries](Retry),
+/// [`Timeout`]s and test [`Sequence`]s.
+///
+/// Decorators are composable: `DecorateTest` is automatically implemented for a tuple with
+/// 2..=8 elements where each element implements `DecorateTest`. The decorators in a tuple
+/// are applied in the order of their appearance in the tuple.
+///
+/// # Examples
+///
+/// ## Basic usage
+///
+/// ```
+/// use test_casing::{decorate, Timeout};
+///
+/// #[test]
+/// # fn eat_test_attribute() {}
+/// #[decorate(Timeout::secs(1))]
+/// fn test_with_timeout() {
+///     // test logic
+/// }
+/// ```
+///
+/// ## Tests returning `Result`s
+///
+/// Decorators can be used on tests returning `Result`s, too:
+///
+/// ```
+/// use test_casing::{decorate, Retry, Timeout};
+/// use std::error::Error;
+///
+/// #[test]
+/// # fn eat_test_attribute() {}
+/// #[decorate(Timeout::millis(200), Retry::times(2))]
+/// // ^ Decorators are applied in the order of their mention. In this case,
+/// // if the test times out, errors or panics, it will be retried up to 2 times.
+/// fn test_with_retries() -> Result<(), Box<dyn Error + Send>> {
+///     // test logic
+/// #   Ok(())
+/// }
+/// ```
+///
+/// ## Multiple `decorate` attributes
+///
+/// Multiple `decorate` attributes are allowed. Thus, the test above is equivalent to
+///
+/// ```
+/// # use test_casing::{decorate, Retry, Timeout};
+/// # use std::error::Error;
+/// #[test]
+/// # fn eat_test_attribute() {}
+/// #[decorate(Timeout::millis(200))]
+/// #[decorate(Retry::times(2))]
+/// fn test_with_retries() -> Result<(), Box<dyn Error + Send>> {
+///     // test logic
+/// #   Ok(())
+/// }
+/// ```
+///
+/// ## Async tests
+///
+/// Decorators work on async tests as well, as long as the `decorate` macro is applied after
+/// the test macro:
+///
+/// ```
+/// # use test_casing::{decorate, Retry};
+/// #[async_std::test]
+/// #[decorate(Retry::times(3))]
+/// async fn async_test() {
+///     // test logic
+/// }
+/// ```
+///
+/// ## Composability and reuse
+///
+/// Decorators can be extracted to a `const`ant or a `static` for readability, composability
+/// and/or reuse:
+///
+/// ```
+/// # use test_casing::{decorate, Retry, RetryErrors, Sequence, Timeout};
+/// # use std::time::Duration;
+///
+/// const RETRY: RetryErrors<String> = Retry::times(2)
+///     .with_delay(Duration::from_secs(1))
+///     .on_error(|s| s.contains("oops"));
+///
+/// static SEQUENCE: Sequence = Sequence::new().abort_on_failure();
+///
+/// #[test]
+/// # fn eat_test_attribute() {}
+/// #[decorate(RETRY, &SEQUENCE)]
+/// fn test_with_error_retries() -> Result<(), String> {
+///     // test logic
+/// #   Ok(())
+/// }
+///
+/// #[test]
+/// fn eat_test_attribute2() {}
+/// #[decorate(&SEQUENCE)]
+/// fn other_test() {
+///     // test logic
+/// }
+/// ```
+///
+/// TODO: add impl example (`ShouldError`)
 pub trait DecorateTest<R>: panic::RefUnwindSafe + Send + Sync + 'static {
+    /// Decorates the provided test function and runs the test.
     fn decorate_and_test<F: TestFn<R>>(&'static self, test_fn: F) -> R;
 }
 
@@ -39,14 +148,31 @@ impl<R: 'static, T: DecorateTest<R>> DecorateTestFn<R> for T {
     }
 }
 
+/// [Test decorator](DecorateTest) that fails a wrapped test if it doesn't complete
+/// in the specified [`Duration`].
+///
+/// # Examples
+///
+/// ```
+/// use test_casing::{decorate, Timeout};
+///
+/// #[test]
+/// # fn eat_test_attribute() {}
+/// #[decorate(Timeout::secs(5))]
+/// fn test_with_timeout() {
+///     // test logic
+/// }
+/// ```
 #[derive(Debug, Clone, Copy)]
 pub struct Timeout(pub Duration);
 
 impl Timeout {
+    /// Defines a timeout with the specified number of seconds.
     pub const fn secs(secs: u64) -> Self {
         Self(Duration::from_secs(secs))
     }
 
+    /// Defines a timeout with the specified number of milliseconds.
     pub const fn millis(millis: u64) -> Self {
         Self(Duration::from_millis(millis))
     }
@@ -77,6 +203,24 @@ impl<R: Send + 'static> DecorateTest<R> for Timeout {
     }
 }
 
+/// [Test decorator](DecorateTest) that retries a wrapped test the specified number of times,
+/// potentially with a delay between retries.
+///
+/// # Examples
+///
+/// ```
+/// use test_casing::{decorate, Retry};
+/// use std::time::Duration;
+///
+/// const RETRY_DELAY: Duration = Duration::from_millis(200);
+///
+/// #[test]
+/// # fn eat_test_attribute() {}
+/// #[decorate(Retry::times(3).with_delay(RETRY_DELAY))]
+/// fn test_with_retries() {
+///     // test logic
+/// }
+/// ```
 #[derive(Debug)]
 pub struct Retry {
     times: usize,
@@ -84,6 +228,7 @@ pub struct Retry {
 }
 
 impl Retry {
+    /// Specified the number of retries. The delay between retries is zero.
     pub const fn times(times: usize) -> Self {
         Self {
             times,
@@ -91,11 +236,13 @@ impl Retry {
         }
     }
 
+    /// Specifies the delay between retries.
     #[must_use]
     pub const fn with_delay(self, delay: Duration) -> Self {
         Self { delay, ..self }
     }
 
+    /// Converts this retry specification to only retry specific errors.
     pub const fn on_error<E>(self, matcher: fn(&E) -> bool) -> RetryErrors<E> {
         RetryErrors {
             inner: self,
@@ -177,6 +324,28 @@ fn extract_panic_str(panic_object: &(dyn Any + Send)) -> Option<&str> {
     }
 }
 
+/// [Test decorator](DecorateTest) that retries a wrapped test a certain number of times
+/// only if an error matches the specified predicate.
+///
+/// Constructed using [`Retry::on_error()`].
+///
+/// # Examples
+///
+/// ```
+/// use test_casing::{decorate, Retry, RetryErrors};
+/// use std::error::Error;
+///
+/// const RETRY: RetryErrors<Box<dyn Error>> = Retry::times(3)
+///     .on_error(|err| err.to_string().contains("retry please"));
+///
+/// #[test]
+/// # fn eat_test_attribute() {}
+/// #[decorate(RETRY)]
+/// fn test_with_retries() -> Result<(), Box<dyn Error>> {
+///     // test logic
+/// #    Ok(())
+/// }
+/// ```
 pub struct RetryErrors<E> {
     inner: Retry,
     matcher: fn(&E) -> bool,
@@ -200,6 +369,34 @@ impl<E: fmt::Display + 'static> DecorateTest<Result<(), E>> for RetryErrors<E> {
     }
 }
 
+/// [Test decorator](DecorateTest) that makes runs of decorated tests sequential. The sequence
+/// can optionally be aborted if a test in it fails.
+///
+/// The run ordering of tests in the sequence is not deterministic. This is because depending
+/// on the command-line args that the test was launched with, not all tests in the sequence may run
+/// at all.
+///
+/// # Examples
+///
+/// ```
+/// use test_casing::{decorate, Sequence, Timeout};
+///
+/// static SEQUENCE: Sequence = Sequence::new().abort_on_failure();
+///
+/// #[test]
+/// # fn eat_test_attribute() {}
+/// #[decorate(&SEQUENCE)]
+/// fn sequential_test() {
+///     // test logic
+/// }
+///
+/// #[test]
+/// # fn eat_test_attribute2() {}
+/// #[decorate(Timeout::secs(1), &SEQUENCE)]
+/// fn other_sequential_test() {
+///     // test logic
+/// }
+/// ```
 #[derive(Debug, Default)]
 pub struct Sequence {
     failed: Mutex<bool>,
@@ -207,6 +404,7 @@ pub struct Sequence {
 }
 
 impl Sequence {
+    /// Creates a new test sequence.
     pub const fn new() -> Self {
         Self {
             failed: Mutex::new(false),
@@ -214,6 +412,7 @@ impl Sequence {
         }
     }
 
+    /// Makes the decorated tests abort immediately if one test from the sequence fails.
     #[must_use]
     pub const fn abort_on_failure(mut self) -> Self {
         self.abort_on_failure = true;

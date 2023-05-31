@@ -19,7 +19,7 @@ fn with_inlined_timeout() {
     thread::sleep(Duration::from_millis(10));
 }
 
-const TIMEOUT: Timeout = Timeout(Duration::from_secs(3));
+const TIMEOUT: Timeout = Timeout::secs(3);
 
 #[test]
 #[decorate(TIMEOUT)]
@@ -122,7 +122,7 @@ fn with_several_decorator_macros() -> Result<(), &'static str> {
 }
 
 #[async_std::test]
-#[decorate(Timeout(Duration::from_millis(100)), Retry::times(1))]
+#[decorate(Timeout::millis(100), Retry::times(1))]
 async fn async_test_with_timeout() {
     static COUNTER: AtomicU32 = AtomicU32::new(0);
 
