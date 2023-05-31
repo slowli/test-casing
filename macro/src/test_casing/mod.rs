@@ -1,4 +1,4 @@
-//! `test_casing` proc macro.
+//! `test_casing` proc macro implementation.
 
 use proc_macro::TokenStream;
 use quote::{quote, ToTokens};
@@ -89,14 +89,14 @@ impl MapAttrs {
 }
 
 impl Parse for MapAttrs {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         struct MapAttrsSyntax {
             base: Ident,
             path_expr: Option<(Token![=], Path)>,
         }
 
         impl Parse for MapAttrsSyntax {
-            fn parse(input: ParseStream) -> syn::Result<Self> {
+            fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
                 Ok(Self {
                     base: input.call(Ident::parse_any)?,
                     path_expr: if input.peek(Token![=]) {
@@ -257,7 +257,7 @@ impl FunctionWrapper {
         }
     }
 
-    fn wrapper(&self) -> impl ToTokens {
+    fn wrap(&self) -> impl ToTokens {
         let name = &self.name;
         let test_cases_iter = self.test_cases_iter();
         let arg_names = self.arg_names();
@@ -406,25 +406,21 @@ impl FunctionWrapper {
     }
 }
 
-pub(crate) fn impl_test_casing(attr: TokenStream, item: TokenStream) -> proc_macro2::TokenStream {
-    let attrs = match CaseAttrs::parse(attr.into()) {
-        Ok(attrs) => attrs,
-        Err(err) => return err.into_compile_error(),
-    };
-    let tokens = match syn::parse(item) {
-        Ok(Item::Fn(mut function)) => FunctionWrapper::new(attrs, &mut function).map(|wrapper| {
-            let wrapper = wrapper.wrapper();
-            quote!(#function #wrapper)
-        }),
-        Ok(item) => {
+pub(crate) fn impl_test_casing(
+    attr: TokenStream,
+    item: TokenStream,
+) -> syn::Result<proc_macro2::TokenStream> {
+    let attrs = CaseAttrs::parse(attr.into())?;
+    let item: Item = syn::parse(item)?;
+    match item {
+        Item::Fn(mut function) => {
+            let wrapper = FunctionWrapper::new(attrs, &mut function)?;
+            let wrapper = wrapper.wrap();
+            Ok(quote!(#function #wrapper))
+        }
+        item => {
             let message = "Item is not supported; use `#[test_cases] on functions";
             Err(SynError::new_spanned(&item, message))
         }
-        Err(err) => return err.into_compile_error(),
-    };
-
-    match tokens {
-        Ok(tokens) => tokens,
-        Err(err) => err.into_compile_error(),
     }
 }

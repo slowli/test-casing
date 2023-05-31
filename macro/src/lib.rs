@@ -18,9 +18,10 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 
+mod decorate;
 mod test_casing;
 
-use crate::test_casing::impl_test_casing;
+use crate::{decorate::impl_decorate, test_casing::impl_test_casing};
 
 /// Flattens a parameterized test into a collection of test cases.
 ///
@@ -58,5 +59,17 @@ use crate::test_casing::impl_test_casing;
 /// See `test-casing` crate-level docs for the examples of usage.
 #[proc_macro_attribute]
 pub fn test_casing(attr: TokenStream, item: TokenStream) -> TokenStream {
-    impl_test_casing(attr, item).into()
+    match impl_test_casing(attr, item) {
+        Ok(tokens) => tokens.into(),
+        Err(err) => err.into_compile_error().into(),
+    }
+}
+
+/// FIXME
+#[proc_macro_attribute]
+pub fn decorate(attr: TokenStream, item: TokenStream) -> TokenStream {
+    match impl_decorate(attr, item) {
+        Ok(tokens) => tokens.into(),
+        Err(err) => err.into_compile_error().into(),
+    }
 }
