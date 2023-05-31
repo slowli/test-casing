@@ -21,6 +21,24 @@ pub trait DecorateTest<R>: panic::RefUnwindSafe + Send + Sync + 'static {
     fn decorate_and_test<F: TestFn<R>>(&'static self, test_fn: F) -> R;
 }
 
+impl<R, T: DecorateTest<R>> DecorateTest<R> for &'static T {
+    fn decorate_and_test<F: TestFn<R>>(&'static self, test_fn: F) -> R {
+        (**self).decorate_and_test(test_fn)
+    }
+}
+
+/// Object-safe version of [`DecorateTest`].
+#[doc(hidden)] // used in the `decorate` proc macro; logically private
+pub trait DecorateTestFn<R>: panic::RefUnwindSafe + Send + Sync + 'static {
+    fn decorate_and_test_fn(&'static self, test_fn: fn() -> R) -> R;
+}
+
+impl<R: 'static, T: DecorateTest<R>> DecorateTestFn<R> for T {
+    fn decorate_and_test_fn(&'static self, test_fn: fn() -> R) -> R {
+        self.decorate_and_test(test_fn)
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct Timeout(pub Duration);
 
@@ -49,6 +67,7 @@ impl<R: Send + 'static> DecorateTest<R> for Timeout {
     }
 }
 
+// FIXME: make Retry(1) mean "1 retry" (= 2 attempts)
 #[derive(Debug)]
 pub struct Retry(pub usize);
 
@@ -207,17 +226,28 @@ impl<E: 'static> DecorateTest<Result<(), E>> for Sequence {
     }
 }
 
-impl<R, A, B> DecorateTest<R> for (A, B)
-where
-    A: DecorateTest<R>,
-    B: DecorateTest<R>,
-{
-    fn decorate_and_test<F: TestFn<R>>(&'static self, test_fn: F) -> R {
-        let copied_ref = &self.1;
-        self.0
-            .decorate_and_test(move || copied_ref.decorate_and_test(test_fn))
-    }
+// TODO: use direct ordering of decorators?
+macro_rules! impl_decorate_test_for_tuple {
+    ($($field:ident : $ty:ident),+ => $($layer:ident),* => $final:ident) => {
+        impl<R, $($ty,)+> DecorateTest<R> for ($($ty,)+)
+        where
+            $($ty: DecorateTest<R>,)+
+        {
+            fn decorate_and_test<F: TestFn<R>>(&'static self, test_fn: F) -> R {
+                let ($($field,)+) = self;
+                $(
+                let test_fn = move || $layer.decorate_and_test(test_fn);
+                )*
+                $final.decorate_and_test(test_fn)
+            }
+        }
+    };
 }
+
+impl_decorate_test_for_tuple!(a: A => => a);
+impl_decorate_test_for_tuple!(a: A, b: B => b => a);
+impl_decorate_test_for_tuple!(a: A, b: B, c: C => c, b => a);
+impl_decorate_test_for_tuple!(a: A, b: B, c: C, d: D => d, c, b => a);
 
 #[cfg(test)]
 mod tests {
@@ -318,24 +348,40 @@ mod tests {
         SEQUENCE.decorate_and_test(second_test);
     }
 
+    fn test_fn() -> Result<(), &'static str> {
+        static TEST_COUNTER: AtomicU32 = AtomicU32::new(0);
+        match TEST_COUNTER.fetch_add(1, Ordering::Relaxed) {
+            0 => {
+                thread::sleep(Duration::from_secs(1));
+                Ok(())
+            }
+            1 => Err("oops"),
+            2 => Ok(()),
+            _ => unreachable!(),
+        }
+    }
+
     #[test]
     fn composing_decorators() {
         const DECORATORS: (Retry, Timeout) = (Retry(3), Timeout(Duration::from_millis(100)));
 
-        fn test_fn() -> Result<(), &'static str> {
-            static TEST_COUNTER: AtomicU32 = AtomicU32::new(0);
-            match TEST_COUNTER.fetch_add(1, Ordering::Relaxed) {
-                0 => {
-                    thread::sleep(Duration::from_secs(1));
-                    Ok(())
-                }
-                1 => Err("oops"),
-                2 => Ok(()),
-                _ => unreachable!(),
-            }
-        }
-
         let test_fn: fn() -> Result<(), &'static str> = test_fn;
         DECORATORS.decorate_and_test(test_fn).unwrap();
+    }
+
+    #[test]
+    fn making_decorator_into_trait_object() {
+        static DECORATORS: &dyn DecorateTestFn<Result<(), &'static str>> =
+            &(Retry(3), Timeout(Duration::from_millis(100)));
+
+        DECORATORS.decorate_and_test_fn(test_fn).unwrap();
+    }
+
+    #[test]
+    fn making_sequence_into_trait_object() {
+        static SEQUENCE: Sequence = Sequence::new();
+        static DECORATORS: &dyn DecorateTestFn<()> = &(&SEQUENCE,);
+
+        DECORATORS.decorate_and_test_fn(|| {});
     }
 }
