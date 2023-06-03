@@ -36,7 +36,46 @@ impl<R, F> TestFn<R> for F where F: Fn() -> R + panic::UnwindSafe + Send + Sync 
 ///
 /// See [module docs](index.html#overview) for the extended description.
 ///
-/// TODO: add impl example (`ShouldError`)
+/// # Examples
+///
+/// The following decorator implements a `#[should_panic]` analogue for errors.
+///
+/// ```
+/// use test_casing::decorators::{DecorateTest, TestFn};
+///
+/// #[derive(Debug, Clone, Copy)]
+/// pub struct ShouldError(pub &'static str);
+///
+/// impl<E: ToString> DecorateTest<Result<(), E>> for ShouldError {
+///     fn decorate_and_test<F: TestFn<Result<(), E>>>(
+///         &self,
+///         test_fn: F,
+///     ) -> Result<(), E> {
+///         let Err(err) = test_fn() else {
+///             panic!("Expected test to error, but it completed successfully");
+///         };
+///         let err = err.to_string();
+///         if err.contains(self.0) {
+///             Ok(())
+///         } else {
+///             panic!(
+///                 "Expected error message to contain `{}`, but it was: {err}",
+///                 self.0
+///             );
+///         }
+///     }
+/// }
+///
+/// // Usage:
+/// # use test_casing::decorate;
+/// # use std::error::Error;
+/// #[test]
+/// # fn eat_test_attribute() {}
+/// #[decorate(ShouldError("oops"))]
+/// fn test_with_an_error() -> Result<(), Box<dyn Error>> {
+///     Err("oops, this test failed".into())
+/// }
+/// ```
 pub trait DecorateTest<R>: panic::RefUnwindSafe + Send + Sync + 'static {
     /// Decorates the provided test function and runs the test.
     fn decorate_and_test<F: TestFn<R>>(&'static self, test_fn: F) -> R;
