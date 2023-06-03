@@ -6,9 +6,9 @@ rust-version = "1.65"
 authors = ["Alex Ostrovski <ostrovski.alex@gmail.com>"]
 readme = "README.md"
 license = "MIT OR Apache-2.0"
-keywords = ["testing", "parameterized", "case"]
+keywords = ["testing", "parameterized", "case", "decorator"]
 categories = ["development-tools::testing"]
-description = "Parameterized tests with procedural code generation"
+description = "Parameterized test cases and test decorators"
 repository = "https://github.com/slowli/test-casing"
 
 [dependencies]
