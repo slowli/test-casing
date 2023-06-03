@@ -1,7 +1,5 @@
 //! Integration tests for `test_casing` macro.
 
-#![cfg_attr(feature = "nightly", feature(test, custom_test_frameworks))]
-
 use async_std::task;
 
 use std::error::Error;
