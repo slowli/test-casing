@@ -2,9 +2,9 @@
 
 use assert_matches::assert_matches;
 
-use super::*;
 #[cfg(feature = "nightly")]
-use crate::nightly::AttrValue;
+use super::nightly::AttrValue;
+use super::*;
 
 #[test]
 fn parsing_case_attrs() {
