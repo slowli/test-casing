@@ -1,4 +1,4 @@
-# Parameterized Rust Tests with Procedural Code Generation
+# Parameterized Rust Tests & Test Decorators
 
 [![Build Status](https://github.com/slowli/test-casing/workflows/CI/badge.svg?branch=main)](https://github.com/slowli/test-casing/actions)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%2FApache--2.0-blue)](https://github.com/slowli/test-casing#license)
@@ -7,16 +7,17 @@
 **Documentation:**
 [![crate docs (main)](https://img.shields.io/badge/main-yellow.svg?label=docs)](https://slowli.github.io/test-casing/test_casing/)
 
-`test-casing` is a minimalistic Rust framework for generating tests for a given set of test cases.
-In other words, it implements parameterized tests of reasonably low cardinality 
-for the standard Rust test runner.
+`test-casing` is a minimalistic Rust framework for generating tests for a given set of test cases
+and decorating them to add retries, timeouts, sequential test processing etc.
+In other words, the framework implements:
 
-## Intended use cases
+- Parameterized tests of reasonably low cardinality for the standard Rust test runner
+- Fully code-based, composable and extensible test decorators.
 
-- Since a separate test wrapper is generated for each case, their number should be
-  reasonably low (roughly speaking, no more than 20).
-- Isolating each test case makes most sense if the cases involve some heavy lifting
-  (spinning up a runtime, logging considerable amount of information, etc.).
+Since a separate test wrapper is generated for each case, their number should be 
+reasonably low (roughly speaking, no more than 20).
+Isolating each test case makes most sense if the cases involve some heavy lifting
+(spinning up a runtime, logging considerable amount of information, etc.).
 
 ## Usage
 
@@ -27,7 +28,7 @@ Add this to your `Crate.toml`:
 test-casing = "0.1.0"
 ```
 
-### Examples
+### Examples: test cases
 
 ```rust
 use test_casing::{cases, test_casing, TestCases};
@@ -72,6 +73,30 @@ async fn test_async(number: i32) {
 #[should_panic(expected = "ParseIntError")]
 fn parsing_number_errors(s: &str) {
     s.parse::<i32>().unwrap();
+}
+```
+
+### Examples: test decorators
+
+```rust
+use test_casing::{
+    decorate, test_casing, decorators::{Retry, Sequence, Timeout},
+};
+
+#[test]
+#[decorate(Retry::times(3), Timeout::secs(3))]
+fn test_with_retry_and_timeouts() {
+    // Test logic
+}
+
+static SEQUENCE: Sequence = Sequence::new().abort_on_failure();
+
+// Execute all test cases sequentially and abort if one of them fails.
+#[test_casing(4, [2, 3, 5, 8])]
+#[async_std::test]
+#[decorate(&SEQUENCE)]
+async fn test_async(number: i32) {
+    assert!(number < 10);
 }
 ```
 
@@ -120,6 +145,10 @@ into test filters (like `cargo test 'number = 3'`) etc.
   is more extensible and easier to read.
 - [Property testing] / [`quickcheck`]-like frameworks provide much more exhaustive approach
   to parameterized testing, but they require significantly more setup effort.
+- [`rstest`] supports test casing and some of the test decorators (e.g., timeouts).
+- [`nextest`] is an alternative test runner that supports most of the test decorators
+  defined in the [`decorators`] module. It does not use code-based decorator config and
+  does not allow for custom decorator.
 
 ## License
 
@@ -134,3 +163,5 @@ shall be dual licensed as above, without any additional terms or conditions.
 [`test-case`]: https://crates.io/crates/test-case
 [Property testing]: https://crates.io/crates/proptest
 [`quickcheck`]: https://crates.io/crates/quickcheck
+[`rstest`]: https://crates.io/crates/rstest
+[`nextest`]: https://nexte.st/
