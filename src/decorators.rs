@@ -1,4 +1,18 @@
 //! Test decorator trait and implementations.
+//!
+//! # Overview
+//!
+//! A [test decorator](DecorateTest) takes a [tested function](TestFn) and calls it zero or more times,
+//! perhaps with additional logic spliced between calls. Examples of decorators include [retries](Retry),
+//! [`Timeout`]s and test [`Sequence`]s.
+//!
+//! Decorators are composable: `DecorateTest` is automatically implemented for a tuple with
+//! 2..=8 elements where each element implements `DecorateTest`. The decorators in a tuple
+//! are applied in the order of their appearance in the tuple.
+//!
+//! # Examples
+//!
+//! See [`decorate`](crate::decorate) macro docs for the examples of usage.
 
 use std::{
     any::Any,
@@ -20,109 +34,7 @@ impl<R, F> TestFn<R> for F where F: Fn() -> R + panic::UnwindSafe + Send + Sync 
 
 /// Test decorator.
 ///
-/// A decorator takes a [tested function](TestFn) and calls it zero or more times, perhaps
-/// with additional logic spliced between calls. Examples of decorators include [retries](Retry),
-/// [`Timeout`]s and test [`Sequence`]s.
-///
-/// Decorators are composable: `DecorateTest` is automatically implemented for a tuple with
-/// 2..=8 elements where each element implements `DecorateTest`. The decorators in a tuple
-/// are applied in the order of their appearance in the tuple.
-///
-/// # Examples
-///
-/// ## Basic usage
-///
-/// ```
-/// use test_casing::{decorate, Timeout};
-///
-/// #[test]
-/// # fn eat_test_attribute() {}
-/// #[decorate(Timeout::secs(1))]
-/// fn test_with_timeout() {
-///     // test logic
-/// }
-/// ```
-///
-/// ## Tests returning `Result`s
-///
-/// Decorators can be used on tests returning `Result`s, too:
-///
-/// ```
-/// use test_casing::{decorate, Retry, Timeout};
-/// use std::error::Error;
-///
-/// #[test]
-/// # fn eat_test_attribute() {}
-/// #[decorate(Timeout::millis(200), Retry::times(2))]
-/// // ^ Decorators are applied in the order of their mention. In this case,
-/// // if the test times out, errors or panics, it will be retried up to 2 times.
-/// fn test_with_retries() -> Result<(), Box<dyn Error + Send>> {
-///     // test logic
-/// #   Ok(())
-/// }
-/// ```
-///
-/// ## Multiple `decorate` attributes
-///
-/// Multiple `decorate` attributes are allowed. Thus, the test above is equivalent to
-///
-/// ```
-/// # use test_casing::{decorate, Retry, Timeout};
-/// # use std::error::Error;
-/// #[test]
-/// # fn eat_test_attribute() {}
-/// #[decorate(Timeout::millis(200))]
-/// #[decorate(Retry::times(2))]
-/// fn test_with_retries() -> Result<(), Box<dyn Error + Send>> {
-///     // test logic
-/// #   Ok(())
-/// }
-/// ```
-///
-/// ## Async tests
-///
-/// Decorators work on async tests as well, as long as the `decorate` macro is applied after
-/// the test macro:
-///
-/// ```
-/// # use test_casing::{decorate, Retry};
-/// #[async_std::test]
-/// #[decorate(Retry::times(3))]
-/// async fn async_test() {
-///     // test logic
-/// }
-/// ```
-///
-/// ## Composability and reuse
-///
-/// Decorators can be extracted to a `const`ant or a `static` for readability, composability
-/// and/or reuse:
-///
-/// ```
-/// # use test_casing::{decorate, Retry, RetryErrors, Sequence, Timeout};
-/// # use std::time::Duration;
-///
-/// const RETRY: RetryErrors<String> = Retry::times(2)
-///     .with_delay(Duration::from_secs(1))
-///     .on_error(|s| s.contains("oops"));
-///
-/// static SEQUENCE: Sequence = Sequence::new().abort_on_failure();
-///
-/// #[test]
-/// # fn eat_test_attribute() {}
-/// #[decorate(RETRY, &SEQUENCE)]
-/// fn test_with_error_retries() -> Result<(), String> {
-///     // test logic
-/// #   Ok(())
-/// }
-///
-/// #[test]
-/// fn eat_test_attribute2() {}
-/// #[decorate(&SEQUENCE)]
-/// fn other_test() {
-///     // test logic
-/// }
-/// ```
+/// See [module docs](index.html#overview) for the extended description.
 ///
 /// TODO: add impl example (`ShouldError`)
 pub trait DecorateTest<R>: panic::RefUnwindSafe + Send + Sync + 'static {
@@ -154,7 +66,7 @@ impl<R: 'static, T: DecorateTest<R>> DecorateTestFn<R> for T {
 /// # Examples
 ///
 /// ```
-/// use test_casing::{decorate, Timeout};
+/// use test_casing::{decorate, decorators::Timeout};
 ///
 /// #[test]
 /// # fn eat_test_attribute() {}
@@ -209,7 +121,7 @@ impl<R: Send + 'static> DecorateTest<R> for Timeout {
 /// # Examples
 ///
 /// ```
-/// use test_casing::{decorate, Retry};
+/// use test_casing::{decorate, decorators::Retry};
 /// use std::time::Duration;
 ///
 /// const RETRY_DELAY: Duration = Duration::from_millis(200);
@@ -332,7 +244,7 @@ fn extract_panic_str(panic_object: &(dyn Any + Send)) -> Option<&str> {
 /// # Examples
 ///
 /// ```
-/// use test_casing::{decorate, Retry, RetryErrors};
+/// use test_casing::{decorate, decorators::{Retry, RetryErrors}};
 /// use std::error::Error;
 ///
 /// const RETRY: RetryErrors<Box<dyn Error>> = Retry::times(3)
@@ -379,7 +291,7 @@ impl<E: fmt::Display + 'static> DecorateTest<Result<(), E>> for RetryErrors<E> {
 /// # Examples
 ///
 /// ```
-/// use test_casing::{decorate, Sequence, Timeout};
+/// use test_casing::{decorate, decorators::{Sequence, Timeout}};
 ///
 /// static SEQUENCE: Sequence = Sequence::new().abort_on_failure();
 ///

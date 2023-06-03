@@ -52,7 +52,7 @@ impl DecorateAttrs {
             return Err(SynError::new_spanned(&sig.inputs, message));
         }
 
-        let cr = quote!(test_casing);
+        let cr = quote!(test_casing::decorators);
         let decorators = &self.decorators;
         let ret_value = &sig.output;
         let ret_value_or_void = match &sig.output {
