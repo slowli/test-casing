@@ -4,7 +4,7 @@
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%2FApache--2.0-blue)](https://github.com/slowli/test-casing#license)
 ![rust 1.65+ required](https://img.shields.io/badge/rust-1.65+-blue.svg?label=Required%20Rust)
 
-**Documentation:**
+**Documentation:** [![Docs.rs](https://docs.rs/test-casing/badge.svg)](https://docs.rs/test-casing/)
 [![crate docs (main)](https://img.shields.io/badge/main-yellow.svg?label=docs)](https://slowli.github.io/test-casing/test_casing/)
 
 `test-casing` is a minimalistic Rust framework for generating tests for a given set of test cases
@@ -143,12 +143,12 @@ into test filters (like `cargo test 'number = 3'`) etc.
 - The [`test-case`] crate uses a similar approach to test case structuring, but differs
   in how test case inputs are specified. Subjectively, the approach used by this crate
   is more extensible and easier to read.
-- [Property testing] / [`quickcheck`]-like frameworks provide much more exhaustive approach
+- [Property testing] / [`quickcheck`]-like frameworks provide a much more exhaustive approach
   to parameterized testing, but they require significantly more setup effort.
-- [`rstest`] supports test casing and some of the test decorators (e.g., timeouts).
+- [`rstest`] supports test casing and some test decorators (e.g., timeouts).
 - [`nextest`] is an alternative test runner that supports most of the test decorators
-  defined in the [`decorators`] module. It does not use code-based decorator config and
-  does not allow for custom decorator.
+  defined by this library. It does not use a code-based decorator config and
+  does not allow for custom decorators. Tests produced with this library can be run by `cargo nextest`.
 
 ## License
 
