@@ -100,9 +100,12 @@
 //! ordinary / non-parameterized tests.
 //!
 //! Requires a nightly Rust toolchain and specifying `#![feature(test, custom_test_frameworks)]`
-//! in the using crate.
+//! in the using crate. Because `custom_test_frameworks` APIs may change between toolchain releases,
+//! the feature may break. See [the CI config] for the nightly toolchain version the crate
+//! is tested against.
 //!
 //! [custom test frameworks]: https://github.com/rust-lang/rust/issues/50297
+//! [the CI config]: https://github.com/slowli/test-casing/blob/main/.github/workflows/ci.yml
 
 #![cfg_attr(feature = "nightly", feature(custom_test_frameworks, test))]
 // Documentation settings
