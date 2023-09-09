@@ -83,7 +83,7 @@ impl<T> fmt::Debug for TestCases<T> {
 
 impl<T> Clone for TestCases<T> {
     fn clone(&self) -> Self {
-        Self { lazy: self.lazy }
+        *self
     }
 }
 
