@@ -15,14 +15,14 @@ description = "Procedural macro for `test-casing`"
 proc-macro = true
 
 [dependencies]
-proc-macro2 = "1.0"
-quote = "1.0"
-syn = { version = "2.0", features = ["full"] }
+proc-macro2.workspace = true
+quote.workspace = true
+syn = { workspace = true, features = ["full"] }
 
 [dev-dependencies]
-assert_matches = "1.5.0"
-syn = { version = "2.0", features = ["extra-traits"] }
-version-sync = "0.9.4"
+assert_matches.workspace = true
+syn = { workspace = true, features = ["extra-traits"] }
+version-sync.workspace = true
 
 [features]
 default = []
