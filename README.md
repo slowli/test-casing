@@ -150,6 +150,11 @@ into test filters (like `cargo test 'number = 3'`) etc.
   defined by this library. It does not use a code-based decorator config and
   does not allow for custom decorators. Tests produced with this library can be run by `cargo nextest`.
 
+## Contributing
+
+All contributions are welcome! See [the contributing guide](CONTRIBUTING.md) to help
+you get involved.
+
 ## License
 
 Licensed under either of [Apache License, Version 2.0](LICENSE-APACHE)

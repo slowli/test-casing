@@ -8,7 +8,7 @@ on:
 
 env:
   msrv: 1.65.0
-  nightly: nightly-2023-09-09
+  nightly: nightly-2023-10-08
 
 jobs:
   build-msrv:
@@ -101,6 +101,8 @@ jobs:
       - build
       - build-msrv
       - build-nightly
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
 
     steps:
