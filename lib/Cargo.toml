@@ -1,5 +1,5 @@
 [package]
-name = "test-casing-macro"
+name = "test-casing"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -9,23 +9,21 @@ repository.workspace = true
 readme = "README.md"
 keywords = ["testing", "parameterized", "case", "decorator"]
 categories = ["development-tools::testing"]
-description = "Procedural macro for `test-casing`"
-
-[lib]
-proc-macro = true
+description = "Parameterized test cases and test decorators"
 
 [dependencies]
-proc-macro2.workspace = true
-quote.workspace = true
-syn = { workspace = true, features = ["full"] }
+once_cell = { workspace = true, optional = true }
+test-casing-macro = { version = "0.1.0", path = "../macro" }
 
 [dev-dependencies]
-assert_matches.workspace = true
-syn = { workspace = true, features = ["extra-traits"] }
+async-std.workspace = true
+doc-comment.workspace = true
+rand.workspace = true
+trybuild.workspace = true
 version-sync.workspace = true
 
 [features]
 default = []
 # Uses custom test frameworks APIs together with a generous spicing of hacks
 # to include arguments in the names of the generated tests.
-nightly = ["proc-macro2/span-locations"]
+nightly = ["test-casing-macro/nightly", "once_cell"]

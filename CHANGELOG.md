@@ -5,6 +5,12 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## 0.1.1 - 2023-10-08
+
+### Fixed
+
+- Fix `ignored_unit_patterns` Clippy lint triggered by the generated code in Rust 1.73+.
+
 ## 0.1.0 - 2023-06-03
 
 The initial release of `test-casing`.
