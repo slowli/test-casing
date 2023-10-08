@@ -1,32 +1,11 @@
-[package]
-name = "test-casing"
+[workspace]
+members = ["lib", "macro"]
+resolver = "2"
+
+[workspace.package]
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.65"
 authors = ["Alex Ostrovski <ostrovski.alex@gmail.com>"]
-readme = "README.md"
 license = "MIT OR Apache-2.0"
-keywords = ["testing", "parameterized", "case", "decorator"]
-categories = ["development-tools::testing"]
-description = "Parameterized test cases and test decorators"
 repository = "https://github.com/slowli/test-casing"
-
-[dependencies]
-once_cell = { version = "1.16.0", optional = true }
-test-casing-macro = { version = "0.1.0", path = "macro" }
-
-[dev-dependencies]
-async-std = { version = "1.12.0", features = ["attributes"] }
-doc-comment = "0.3.3"
-rand = "0.8.5"
-trybuild = "1.0.85"
-version-sync = "0.9.4"
-
-[features]
-default = []
-# Uses custom test frameworks APIs together with a generous spicing of hacks
-# to include arguments in the names of the generated tests.
-nightly = ["test-casing-macro/nightly", "once_cell"]
-
-[workspace]
-members = [".", "macro"]
