@@ -245,9 +245,9 @@ impl FunctionWrapper {
         let name = &self.name;
         let cases_expr = &self.attrs.expr;
         let (case_binding, case_args) = self.case_binding();
-        let maybe_output_binding = match &self.fn_sig.output {
-            ReturnType::Default => None,
-            ReturnType::Type(..) => Some(quote!(let _ = )),
+        let maybe_output_binding = match (&self.fn_sig.asyncness, &self.fn_sig.output) {
+            (None, ReturnType::Default) => None,
+            _ => Some(quote!(let _ = )),
         };
         // ^ Using `let _ = ` on the `()` return type triggers https://rust-lang.github.io/rust-clippy/master/index.html#/ignored_unit_patterns
         // in Rust 1.73+.

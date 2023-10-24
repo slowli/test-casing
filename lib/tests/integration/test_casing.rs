@@ -77,6 +77,15 @@ const STRING_CASES: TestCases<(String, i32)> = cases!((0..5).map(|i| (i.to_strin
 
 #[test_casing(5, STRING_CASES)]
 #[async_std::test]
+async fn async_string_conversion_without_output(#[map(ref)] s: &str, expected: i32) {
+    let actual: i32 = s.parse().unwrap();
+    assert_eq!(actual, expected);
+    let expected_string = task::spawn_blocking(move || expected.to_string()).await;
+    assert_eq!(expected_string, s);
+}
+
+#[test_casing(5, STRING_CASES)]
+#[async_std::test]
 async fn async_string_conversion(#[map(ref)] s: &str, expected: i32) -> Result<(), Box<dyn Error>> {
     let actual: i32 = s.parse()?;
     assert_eq!(actual, expected);
