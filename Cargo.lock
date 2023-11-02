@@ -662,7 +662,7 @@ dependencies = [
 
 [[package]]
 name = "test-casing"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "async-std",
  "doc-comment",
@@ -675,7 +675,7 @@ dependencies = [
 
 [[package]]
 name = "test-casing-macro"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "assert_matches",
  "proc-macro2",

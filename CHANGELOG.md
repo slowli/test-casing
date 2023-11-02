@@ -5,6 +5,15 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## 0.1.2 - 2023-11-02
+
+### Fixed
+
+- Fix `unused_must_use` lint triggered for async functions without the explicit
+  return value after the previous fix.
+- Pin a version of the macro dependency in the main library so that it does not break
+  in the future releases.
+
 ## 0.1.1 - 2023-10-08
 
 ### Fixed
