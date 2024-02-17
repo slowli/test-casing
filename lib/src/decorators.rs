@@ -393,7 +393,7 @@ impl Sequence {
 
 impl DecorateTest<()> for Sequence {
     fn decorate_and_test<F: TestFn<()>>(&self, test_fn: F) {
-        self.decorate_inner(test_fn, (), |_| false);
+        self.decorate_inner(test_fn, (), |()| false);
     }
 }
 
