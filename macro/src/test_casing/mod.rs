@@ -254,7 +254,7 @@ impl FunctionWrapper {
 
         quote! {
             const _: () = {
-                #[allow(dead_code)]
+                #[allow(dead_code, clippy::no_effect_underscore_binding)]
                 fn __test_cases_iterator() {
                     let #case_binding = #cr::case(#cases_expr, 0);
                     #maybe_output_binding #name(#case_args);
@@ -275,6 +275,9 @@ impl FunctionWrapper {
             #test_cases_iter
 
             #[cfg(test)]
+            #[allow(clippy::no_effect_underscore_binding)]
+            // ^ We use `__ident`s to not alias user-defined idents accidentally. Unfortunately,
+            // this triggers this lint on Rust 1.76+.
             mod #name {
                 use super::*;
                 #arg_names

@@ -36,9 +36,10 @@ fn with_mixed_decorators() {
 fn with_retries() {
     static COUNTER: AtomicU32 = AtomicU32::new(0);
 
-    if COUNTER.fetch_add(1, Ordering::Relaxed) == 0 {
-        panic!("Sometimes we all fail");
-    }
+    assert!(
+        COUNTER.fetch_add(1, Ordering::Relaxed) != 0,
+        "Sometimes we all fail"
+    );
 }
 
 #[test]
@@ -147,9 +148,7 @@ impl SequenceChecker {
 
     fn start(&self) -> SequenceCheckerGuard<'_> {
         let prev_value = self.is_running.swap(true, Ordering::SeqCst);
-        if prev_value {
-            panic!("Sequential tests are not sequential!");
-        }
+        assert!(!prev_value, "Sequential tests are not sequential!");
         SequenceCheckerGuard {
             is_running: &self.is_running,
         }
