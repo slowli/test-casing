@@ -5,6 +5,8 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## 0.1.3 - 2024-03-03
+
 ### Fixed
 
 - Fix `clippy::no_effect_underscore_binding` lint triggered by the generated code in Rust 1.76+.

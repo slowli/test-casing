@@ -3,7 +3,8 @@ members = ["lib", "macro"]
 resolver = "2"
 
 [workspace.package]
-version = "0.1.2"
+# **NB.** `test-casing-macro` dependency version must be bumped in the `test-casing` manifest
+version = "0.1.3"
 edition = "2021"
 rust-version = "1.65"
 authors = ["Alex Ostrovski <ostrovski.alex@gmail.com>"]
