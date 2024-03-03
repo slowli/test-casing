@@ -8,7 +8,7 @@
 //! [`test-casing`]: https://docs.rs/test-casing/
 
 // Documentation settings
-#![doc(html_root_url = "https://docs.rs/test-casing-macro/0.1.2")]
+#![doc(html_root_url = "https://docs.rs/test-casing-macro/0.1.3")]
 // Linter settings
 #![warn(missing_debug_implementations, bare_trait_objects)]
 #![warn(clippy::all, clippy::pedantic)]

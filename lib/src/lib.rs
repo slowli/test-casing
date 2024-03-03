@@ -109,7 +109,7 @@
 
 #![cfg_attr(feature = "nightly", feature(custom_test_frameworks, test))]
 // Documentation settings
-#![doc(html_root_url = "https://docs.rs/test-casing/0.1.2")]
+#![doc(html_root_url = "https://docs.rs/test-casing/0.1.3")]
 // Linter settings
 #![warn(missing_debug_implementations, missing_docs, bare_trait_objects)]
 #![warn(clippy::all, clippy::pedantic)]
