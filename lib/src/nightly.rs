@@ -52,10 +52,7 @@ pub fn create_test_description<T: fmt::Debug>(
     cases: impl IntoIterator<Item = T>,
     index: usize,
 ) -> TestDesc {
-    let path_in_crate = match base_name.split_once("::") {
-        Some((_, path)) => path,
-        None => "",
-    };
+    let path_in_crate = base_name.split_once("::").map_or("", |(_, path)| path);
     let test_args = crate::case(cases, index);
     let description = arg_names.print_with_args(&test_args);
     TestDesc {
