@@ -524,7 +524,7 @@ mod tests {
         static SEQUENCE: Sequence = Sequence::new();
         static ENTRY_COUNTER: AtomicU32 = AtomicU32::new(0);
 
-        let first_test = || {
+        let first_test: fn() = || {
             let counter = ENTRY_COUNTER.fetch_add(1, Ordering::Relaxed);
             assert_eq!(counter, 0);
             thread::sleep(Duration::from_millis(10));
@@ -550,7 +550,7 @@ mod tests {
 
         let failing_test =
             || Err::<(), _>(io::Error::new(io::ErrorKind::AddrInUse, "please try later"));
-        let second_test = || unreachable!("Second test should not be called!");
+        let second_test: fn() = || unreachable!("Second test should not be called!");
 
         SEQUENCE.decorate_and_test(failing_test).unwrap_err();
         SEQUENCE.decorate_and_test(second_test);

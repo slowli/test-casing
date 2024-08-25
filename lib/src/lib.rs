@@ -239,15 +239,15 @@ pub use test_casing_macro::decorate;
 ///
 /// # Inputs
 ///
-/// This attribute must be placed on a free-standing function with 1..8 arguments.
+/// This attribute must be placed on a freestanding function with 1..8 arguments.
 /// The attribute must be invoked with 2 values:
 ///
 /// 1. Number of test cases, a number literal
 /// 2. A *case iterator* expression evaluating to an implementation of [`IntoIterator`]
-///   with [`Debug`]gable, `'static` items.
-///   If the target function has a single argument, the iterator item type must equal to
-///   the argument type. Otherwise, the iterator must return a tuple in which each item
-///   corresponds to the argument with the same index.
+///    with [`Debug`]gable, `'static` items.
+///    If the target function has a single argument, the iterator item type must equal to
+///    the argument type. Otherwise, the iterator must return a tuple in which each item
+///    corresponds to the argument with the same index.
 ///
 /// A case iterator expression may reference the environment (e.g., it can be a name of a constant).
 /// It doesn't need to be a constant expression (e.g., it may allocate in heap). It should
