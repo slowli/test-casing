@@ -1,10 +1,10 @@
 error: tested function must have no more than 7 args
   --> tests/ui/fn_with_too_many_args.rs:4:1
    |
-4  | / fn tested_function(
-5  | |     _arg0: i32,
-6  | |     _arg1: i32,
-7  | |     _arg2: i32,
+ 4 | / fn tested_function(
+ 5 | |     _arg0: i32,
+ 6 | |     _arg1: i32,
+ 7 | |     _arg2: i32,
 ...  |
 12 | |     _arg7: i32,
 13 | | ) {
