@@ -68,7 +68,7 @@ impl_arg_names!(7 => 0: T, 1: U, 2: V, 3: W, 4: X, 5: Y, 6: Z);
 ///     use rand::{rngs::StdRng, Rng, SeedableRng};
 ///
 ///     let mut rng = StdRng::seed_from_u64(123);
-///     (0..5).map(move |_| rng.gen())
+///     (0..5).map(move |_| rng.random())
 /// });
 /// ```
 pub struct TestCases<T> {
