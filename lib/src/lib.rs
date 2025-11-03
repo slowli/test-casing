@@ -128,11 +128,10 @@
 ///
 /// ## Basic usage
 ///
-/// ```
+/// ```no_run
 /// use test_casing::{decorate, decorators::Timeout};
 ///
 /// #[test]
-/// # fn eat_test_attribute() {}
 /// #[decorate(Timeout::secs(1))]
 /// fn test_with_timeout() {
 ///     // test logic
@@ -143,12 +142,11 @@
 ///
 /// Decorators can be used on tests returning `Result`s, too:
 ///
-/// ```
+/// ```no_run
 /// use test_casing::{decorate, decorators::{Retry, Timeout}};
 /// use std::error::Error;
 ///
 /// #[test]
-/// # fn eat_test_attribute() {}
 /// #[decorate(Timeout::millis(200), Retry::times(2))]
 /// // ^ Decorators are applied in the order of their mention. In this case,
 /// // if the test times out, errors or panics, it will be retried up to 2 times.
@@ -162,11 +160,10 @@
 ///
 /// Multiple `decorate` attributes are allowed. Thus, the test above is equivalent to
 ///
-/// ```
+/// ```no_run
 /// # use test_casing::{decorate, decorators::{Retry, Timeout}};
 /// # use std::error::Error;
 /// #[test]
-/// # fn eat_test_attribute() {}
 /// #[decorate(Timeout::millis(200))]
 /// #[decorate(Retry::times(2))]
 /// fn test_with_retries() -> Result<(), Box<dyn Error + Send>> {
@@ -180,9 +177,9 @@
 /// Decorators work on async tests as well, as long as the `decorate` macro is applied after
 /// the test macro:
 ///
-/// ```
+/// ```no_run
 /// # use test_casing::{decorate, decorators::Retry};
-/// #[async_std::test]
+/// #[tokio::test]
 /// #[decorate(Retry::times(3))]
 /// async fn async_test() {
 ///     // test logic
@@ -194,7 +191,7 @@
 /// Decorators can be extracted to a `const`ant or a `static` for readability, composability
 /// and/or reuse:
 ///
-/// ```
+/// ```no_run
 /// # use test_casing::{decorate, decorators::*};
 /// # use std::time::Duration;
 /// const RETRY: RetryErrors<String> = Retry::times(2)
@@ -204,7 +201,6 @@
 /// static SEQUENCE: Sequence = Sequence::new().abort_on_failure();
 ///
 /// #[test]
-/// # fn eat_test_attribute() {}
 /// #[decorate(RETRY, &SEQUENCE)]
 /// fn test_with_error_retries() -> Result<(), String> {
 ///     // test logic
@@ -212,7 +208,6 @@
 /// }
 ///
 /// #[test]
-/// # fn eat_test_attribute2() {}
 /// #[decorate(&SEQUENCE)]
 /// fn other_test() {
 ///     // test logic
@@ -300,7 +295,7 @@ pub use test_casing_macro::decorate;
 /// The function on which the `test_casing` attribute is placed can be accessed from other code
 /// (e.g., for more tests):
 ///
-/// ```
+/// ```no_run
 /// # use test_casing::test_casing;
 /// # use std::error::Error;
 /// #[test_casing(3, ["0", "42", "-3"])]

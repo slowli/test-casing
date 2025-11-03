@@ -16,9 +16,9 @@ once_cell = { workspace = true, optional = true }
 test-casing-macro = { version = "=0.1.3", path = "../macro" }
 
 [dev-dependencies]
-async-std.workspace = true
 doc-comment.workspace = true
 rand.workspace = true
+tokio = { workspace = true, features = ["rt", "macros", "time"] }
 trybuild.workspace = true
 version-sync.workspace = true
 
