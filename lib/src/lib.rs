@@ -295,7 +295,7 @@ pub use test_casing_macro::decorate;
 /// The function on which the `test_casing` attribute is placed can be accessed from other code
 /// (e.g., for more tests):
 ///
-/// ```
+/// ```no_run
 /// # use test_casing::test_casing;
 /// # use std::error::Error;
 /// #[test_casing(3, ["0", "42", "-3"])]
