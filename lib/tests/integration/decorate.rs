@@ -1,7 +1,5 @@
 //! Integration tests for the `decorate` macro.
 
-use async_std::task;
-
 use std::{
     error::Error,
     sync::atomic::{AtomicBool, AtomicU32, Ordering},
@@ -120,13 +118,13 @@ fn with_several_decorator_macros() -> Result<(), &'static str> {
     }
 }
 
-#[async_std::test]
+#[tokio::test]
 #[decorate(Timeout::millis(100), Retry::times(1))]
 async fn async_test_with_timeout() {
     static COUNTER: AtomicU32 = AtomicU32::new(0);
 
     if COUNTER.fetch_add(1, Ordering::Relaxed) == 0 {
-        task::sleep(Duration::from_millis(500)).await;
+        tokio::time::sleep(Duration::from_millis(500)).await;
         // ^ will cause the test failure
     }
 }
@@ -184,13 +182,13 @@ fn other_sequential_test() {
     thread::sleep(Duration::from_millis(50));
 }
 
-#[async_std::test]
+#[tokio::test]
 #[decorate(Retry::times(1), &SEQUENCE)]
 async fn async_sequential_test() -> Result<(), Box<dyn Error>> {
     static COUNTER: AtomicU32 = AtomicU32::new(0);
 
     let _guard = SEQUENCE_CHECKER.start();
-    task::sleep(Duration::from_millis(50)).await;
+    tokio::time::sleep(Duration::from_millis(50)).await;
     if COUNTER.fetch_add(1, Ordering::Relaxed) == 0 {
         Err("oops".into())
     } else {

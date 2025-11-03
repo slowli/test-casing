@@ -1,7 +1,5 @@
 //! Integration tests for `test_casing` macro.
 
-use async_std::task;
-
 use std::error::Error;
 
 use test_casing::{cases, test_casing, Product, TestCases};
@@ -76,21 +74,21 @@ fn string_conversion_fail(bogus_str: &str) {
 const STRING_CASES: TestCases<(String, i32)> = cases!((0..5).map(|i| (i.to_string(), i)));
 
 #[test_casing(5, STRING_CASES)]
-#[async_std::test]
+#[tokio::test]
 async fn async_string_conversion_without_output(#[map(ref)] s: &str, expected: i32) {
     let actual: i32 = s.parse().unwrap();
     assert_eq!(actual, expected);
-    let expected_string = task::spawn_blocking(move || expected.to_string()).await;
-    assert_eq!(expected_string, s);
+    let expected_string = tokio::task::spawn_blocking(move || expected.to_string()).await;
+    assert_eq!(expected_string.unwrap(), s);
 }
 
 #[test_casing(5, STRING_CASES)]
-#[async_std::test]
+#[tokio::test]
 async fn async_string_conversion(#[map(ref)] s: &str, expected: i32) -> Result<(), Box<dyn Error>> {
     let actual: i32 = s.parse()?;
     assert_eq!(actual, expected);
-    let expected_string = task::spawn_blocking(move || expected.to_string()).await;
-    assert_eq!(expected_string, s);
+    let expected_string = tokio::task::spawn_blocking(move || expected.to_string()).await;
+    assert_eq!(expected_string.unwrap(), s);
     Ok(())
 }
 
@@ -111,7 +109,7 @@ mod random {
     // if the number of test cases should be large.
     const RANDOM_NUMBERS: TestCases<u32> = cases!({
         let mut rng = StdRng::seed_from_u64(123_456);
-        iter::repeat_with(move || rng.gen())
+        iter::repeat_with(move || rng.random())
     });
 
     #[test_casing(10, RANDOM_NUMBERS)]
