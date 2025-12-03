@@ -310,6 +310,9 @@ pub use test_casing_macro::decorate;
 /// }
 /// ```
 ///
+/// The number of test cases is asserted in a separate generated test. This ensures that no cases
+/// are skipped by "underreporting" this count (e.g., if the test cases expression is extended).
+///
 /// ## Case expressions
 ///
 /// Case expressions can be extracted to a constant for reuse or better code structuring.
@@ -414,4 +417,4 @@ pub mod decorators;
 pub mod nightly;
 mod test_casing;
 
-pub use crate::test_casing::{case, ArgNames, Product, ProductIter, TestCases};
+pub use crate::test_casing::{assert_case_count, case, ArgNames, Product, ProductIter, TestCases};

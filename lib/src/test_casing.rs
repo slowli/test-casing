@@ -13,6 +13,28 @@ where
     })
 }
 
+#[doc(hidden)] // used by the `#[test_casing]` macro; logically private
+pub fn assert_case_count(iter: impl IntoIterator, expected_count: usize) {
+    const MAX_SIZE_HINT: usize = 1_000;
+
+    let iter = iter.into_iter();
+    let (lo, hi) = iter.size_hint();
+    let actual_count = if Some(lo) == hi {
+        lo
+    } else if hi.is_none_or(|hi| hi > MAX_SIZE_HINT) {
+        // Here, we don't have an exact-sized iterator. We should be careful to use `count()`,
+        // because it can hang with infinite-sized iterators.
+        return;
+    } else {
+        iter.count()
+    };
+
+    assert_eq!(
+        actual_count, expected_count,
+        "Unexpected number of test cases; use #[test_casing({actual_count}, ..)]"
+    );
+}
+
 /// Allows printing named arguments together with their values to a `String`.
 #[doc(hidden)] // used by the `#[test_casing]` macro; logically private
 pub trait ArgNames<T: fmt::Debug>: Copy + IntoIterator<Item = &'static str> {
@@ -149,15 +171,29 @@ where
     type IntoIter = ProductIter<T, U>;
 
     fn into_iter(self) -> Self::IntoIter {
-        let (_, second) = &self.0;
-        let second = second.clone();
+        let (first, second) = &self.0;
+        let second = second.clone().into_iter();
+        let size_hint = product_size_hint(&first.clone().into_iter(), &second);
         ProductIter {
             sources: self.0,
+            size_hint,
             first_idx: 0,
-            second_iter: second.into_iter().fuse(),
+            second_iter: second.fuse(),
             is_finished: false,
         }
     }
+}
+
+fn product_size_hint(first: &impl Iterator, second: &impl Iterator) -> (usize, Option<usize>) {
+    let (first_lo, first_hi) = first.size_hint();
+    let (second_lo, second_hi) = second.size_hint();
+    let lo = first_lo.saturating_mul(second_lo);
+    let hi = if let (Some(x), Some(y)) = (first_hi, second_hi) {
+        x.checked_mul(y)
+    } else {
+        None
+    };
+    (lo, hi)
 }
 
 macro_rules! impl_product {
@@ -192,6 +228,7 @@ impl_product!(t: T, u: U, v: V, w: W, x: X, y: Y, z: Z);
 #[derive(Debug)]
 pub struct ProductIter<T: IntoIterator, U: IntoIterator> {
     sources: (T, U),
+    size_hint: (usize, Option<usize>),
     first_idx: usize,
     second_iter: Fuse<U::IntoIter>,
     is_finished: bool,
@@ -222,6 +259,21 @@ where
             self.second_iter = self.sources.1.clone().into_iter().fuse();
         }
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.size_hint
+    }
+}
+
+impl<T, U> ExactSizeIterator for ProductIter<T, U>
+where
+    T: Clone + IntoIterator<IntoIter: ExactSizeIterator>,
+    U: Clone + IntoIterator<IntoIter: ExactSizeIterator>,
+{
+    fn len(&self) -> usize {
+        // By construction, `size_hint` will always have `(n, Some(n))` form.
+        self.size_hint.0
+    }
 }
 
 #[cfg(doctest)]
@@ -237,15 +289,33 @@ mod tests {
     fn cartesian_product() {
         let numbers = cases!(0..3);
         let strings = cases!(["0", "1"]);
-        let cases: Vec<_> = Product((numbers, strings)).into_iter().collect();
+        let prod = Product((numbers, strings)).into_iter();
+        assert_eq!(prod.size_hint(), (6, Some(6)));
+        let cases: Vec<_> = prod.into_iter().collect();
         assert_eq!(
             cases.as_slice(),
             [(0, "0"), (0, "1"), (1, "0"), (1, "1"), (2, "0"), (2, "1")]
         );
 
         let booleans = [false, true];
-        let cases: HashSet<_> = Product((numbers, strings, booleans)).into_iter().collect();
+        let prod = Product((numbers, strings, booleans)).into_iter();
+        assert_eq!(prod.size_hint(), (12, Some(12)));
+        let cases: HashSet<_> = prod.collect();
         assert_eq!(cases.len(), 12); // 3 * 2 * 2
+    }
+
+    #[test]
+    fn exact_size_iterator_for_product() {
+        let numbers = 0..3;
+        let strings = ["0", "1"];
+        let prod = Product((numbers, strings)).into_iter();
+        assert_eq!(prod.size_hint(), (6, Some(6)));
+        assert_eq!(prod.len(), 6);
+        let cases: Vec<_> = prod.into_iter().collect();
+        assert_eq!(
+            cases.as_slice(),
+            [(0, "0"), (0, "1"), (1, "0"), (1, "1"), (2, "0"), (2, "1")]
+        );
     }
 
     #[test]
