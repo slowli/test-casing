@@ -5,6 +5,11 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Added
+
+- Assert the test case count in a separate generated test. This protects against the scenario in which
+  the number of test cases is increased, but the `test_casing` arg isn't updated.
+
 ### Changed
 
 - Bump minimum supported Rust version to 1.82.
