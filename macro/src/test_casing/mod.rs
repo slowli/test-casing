@@ -1,5 +1,7 @@
 //! `test_casing` proc macro implementation.
 
+use std::{fmt, mem};
+
 use proc_macro::TokenStream;
 use quote::{quote, ToTokens};
 use syn::{
@@ -9,8 +11,6 @@ use syn::{
     Attribute, Expr, FnArg, Ident, Item, ItemFn, LitInt, Pat, PatType, Path, ReturnType, Signature,
     Token,
 };
-
-use std::{fmt, mem};
 
 #[cfg(feature = "nightly")]
 mod nightly;
@@ -270,6 +270,18 @@ impl FunctionWrapper {
         let index_width = (self.attrs.count - 1).to_string().len();
         let cases = (0..self.attrs.count).map(|i| self.case(i, index_width));
 
+        // Ideally, we'd want to assert on the cases iterator length in compile time.
+        // Since this is impossible on stable Rust, we do the next best thing - generating a dedicated test for this.
+        let count = self.attrs.count;
+        let cases_expr = &self.attrs.expr;
+        let cr = quote!(test_casing);
+        let case_count_assert = quote! {
+            #[test]
+            fn case_count_is_correct() {
+                #cr::assert_case_count(#cases_expr, #count);
+            }
+        };
+
         quote! {
             // Access the iterator to ensure it works even if not building for tests.
             #test_cases_iter
@@ -281,6 +293,7 @@ impl FunctionWrapper {
             mod #name {
                 use super::*;
                 #arg_names
+                #case_count_assert
                 #(#cases)*
             }
         }

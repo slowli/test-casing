@@ -1,9 +1,9 @@
 //! Nightly-specific types and functionality.
 
+use std::fmt;
+
 use quote::{quote, ToTokens};
 use syn::{parse::Error as SynError, Attribute, Expr, ExprLit, Lit, Meta, MetaList, MetaNameValue};
-
-use std::fmt;
 
 pub(crate) enum AttrValue {
     Empty,

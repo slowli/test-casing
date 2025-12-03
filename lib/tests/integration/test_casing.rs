@@ -99,10 +99,9 @@ fn unit_test_detection_works() {
 
 // Tests paths to tests in modules.
 mod random {
-    use rand::{rngs::StdRng, Rng, SeedableRng};
-
     use std::iter;
 
+    use rand::{rngs::StdRng, Rng, SeedableRng};
     use test_casing::{cases, test_casing, TestCases};
 
     // The library can be used for randomized tests as well, but it's probably not the best choice

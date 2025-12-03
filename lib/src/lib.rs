@@ -229,7 +229,6 @@
 /// }
 /// ```
 pub use test_casing_macro::decorate;
-
 /// Flattens a parameterized test into a collection of test cases.
 ///
 /// # Inputs
