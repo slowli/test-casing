@@ -13,7 +13,7 @@ description = "Parameterized test cases and test decorators"
 
 [dependencies]
 once_cell = { workspace = true, optional = true }
-test-casing-macro = { version = "=0.1.3", path = "../macro" }
+test-casing-macro.workspace = true
 
 [dev-dependencies]
 doc-comment.workspace = true
