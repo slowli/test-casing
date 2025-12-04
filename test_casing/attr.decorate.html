@@ -1,0 +1,72 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Wraps a tested function to add retries, timeouts etc."><title>decorate in test_casing - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-ca0dd0c4.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="test_casing" data-themes="" data-resource-suffix="" data-rustdoc-version="1.93.0-nightly (bd3ac0330 2025-11-01)" data-channel="nightly" data-search-js="search-5c29b3b5.js" data-stringdex-js="stringdex-c3e638e9.js" data-settings-js="settings-c38705f0.js" ><script src="../static.files/storage-e2aeef58.js"></script><script defer src="sidebar-items.js"></script><script defer src="../static.files/main-ce535bd0.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-263c88ec.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-044be391.svg"></head><body class="rustdoc attr"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">decorate</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../test_casing/index.html">test_<wbr>casing</a><span class="version">0.1.3</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">decorate</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#inputs" title="Inputs">Inputs</a></li><li><a href="#examples" title="Examples">Examples</a><ul><li><a href="#basic-usage" title="Basic usage">Basic usage</a></li><li><a href="#tests-returning-results" title="Tests returning `Result`s">Tests returning <code>Result</code>s</a></li><li><a href="#multiple-decorate-attributes" title="Multiple `decorate` attributes">Multiple <code>decorate</code> attributes</a></li><li><a href="#async-tests" title="Async tests">Async tests</a></li><li><a href="#composability-and-reuse" title="Composability and reuse">Composability and reuse</a></li><li><a href="#use-with-test_casing" title="Use with `test_casing`">Use with <code>test_casing</code></a></li></ul></li></ul></section><div id="rustdoc-modnav"><h2 class="in-crate"><a href="index.html">In crate test_<wbr>casing</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="index.html">test_casing</a></div><h1>Attribute Macro <span class="attr">decorate</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/test_casing_macro/lib.rs.html#35">Source</a> </span></div><pre class="rust item-decl"><code>#[decorate]</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Wraps a tested function to add retries, timeouts etc.</p>
+<h2 id="inputs"><a class="doc-anchor" href="#inputs">§</a>Inputs</h2>
+<p>This attribute must be placed on a test function (i.e., one decorated with <code>#[test]</code>,
+<code>#[tokio::test]</code>, etc.). The attribute must be invoked with a comma-separated list
+of one or more <a href="decorators/trait.DecorateTest.html" title="trait test_casing::decorators::DecorateTest">test decorators</a>. Each decorator must
+be a constant expression (i.e., it should be usable as a definition of a <code>static</code> variable).</p>
+<h2 id="examples"><a class="doc-anchor" href="#examples">§</a>Examples</h2><h3 id="basic-usage"><a class="doc-anchor" href="#basic-usage">§</a>Basic usage</h3>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>test_casing::{decorate, decorators::Timeout};
+
+<span class="attr">#[test]
+#[decorate(Timeout::secs(<span class="number">1</span>))]
+</span><span class="kw">fn </span>test_with_timeout() {
+    <span class="comment">// test logic
+</span>}</code></pre></div><h3 id="tests-returning-results"><a class="doc-anchor" href="#tests-returning-results">§</a>Tests returning <code>Result</code>s</h3>
+<p>Decorators can be used on tests returning <code>Result</code>s, too:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>test_casing::{decorate, decorators::{Retry, Timeout}};
+<span class="kw">use </span>std::error::Error;
+
+<span class="attr">#[test]
+#[decorate(Timeout::millis(<span class="number">200</span>), Retry::times(<span class="number">2</span>))]
+</span><span class="comment">// ^ Decorators are applied in the order of their mention. In this case,
+// if the test times out, errors or panics, it will be retried up to 2 times.
+</span><span class="kw">fn </span>test_with_retries() -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error + Send&gt;&gt; {
+    <span class="comment">// test logic
+</span>}</code></pre></div><h3 id="multiple-decorate-attributes"><a class="doc-anchor" href="#multiple-decorate-attributes">§</a>Multiple <code>decorate</code> attributes</h3>
+<p>Multiple <code>decorate</code> attributes are allowed. Thus, the test above is equivalent to</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[test]
+#[decorate(Timeout::millis(<span class="number">200</span>))]
+#[decorate(Retry::times(<span class="number">2</span>))]
+</span><span class="kw">fn </span>test_with_retries() -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error + Send&gt;&gt; {
+    <span class="comment">// test logic
+</span>}</code></pre></div><h3 id="async-tests"><a class="doc-anchor" href="#async-tests">§</a>Async tests</h3>
+<p>Decorators work on async tests as well, as long as the <code>decorate</code> macro is applied after
+the test macro:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[tokio::test]
+#[decorate(Retry::times(<span class="number">3</span>))]
+</span><span class="kw">async fn </span>async_test() {
+    <span class="comment">// test logic
+</span>}</code></pre></div><h3 id="composability-and-reuse"><a class="doc-anchor" href="#composability-and-reuse">§</a>Composability and reuse</h3>
+<p>Decorators can be extracted to a <code>const</code>ant or a <code>static</code> for readability, composability
+and/or reuse:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">const </span>RETRY: RetryErrors&lt;String&gt; = Retry::times(<span class="number">2</span>)
+    .with_delay(Duration::from_secs(<span class="number">1</span>))
+    .on_error(|s| s.contains(<span class="string">"oops"</span>));
+
+<span class="kw">static </span>SEQUENCE: Sequence = Sequence::new().abort_on_failure();
+
+<span class="attr">#[test]
+#[decorate(RETRY, <span class="kw-2">&amp;</span>SEQUENCE)]
+</span><span class="kw">fn </span>test_with_error_retries() -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
+    <span class="comment">// test logic
+</span>}
+
+<span class="attr">#[test]
+#[decorate(<span class="kw-2">&amp;</span>SEQUENCE)]
+</span><span class="kw">fn </span>other_test() {
+    <span class="comment">// test logic
+</span>}</code></pre></div><h3 id="use-with-test_casing"><a class="doc-anchor" href="#use-with-test_casing">§</a>Use with <code>test_casing</code></h3>
+<p>When used together with the <a href="attr.test_casing.html" title="attr test_casing::test_casing"><code>test_casing</code></a> macro, the decorators will apply
+to each generated case.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>test_casing::{decorate, test_casing, decorators::Timeout};
+
+<span class="attr">#[test_casing(<span class="number">3</span>, [<span class="number">3</span>, <span class="number">5</span>, <span class="number">42</span>]</span>)]
+<span class="attr">#[decorate(Timeout::secs(<span class="number">1</span>))]
+</span><span class="kw">fn </span>parameterized_test_with_timeout(input: u64) {
+    <span class="comment">// test logic
+</span>}</code></pre></div></div></details></section></div></main></body></html>

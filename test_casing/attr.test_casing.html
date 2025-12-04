@@ -1,0 +1,125 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Flattens a parameterized test into a collection of test cases."><title>test_casing in test_casing - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-ca0dd0c4.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="test_casing" data-themes="" data-resource-suffix="" data-rustdoc-version="1.93.0-nightly (bd3ac0330 2025-11-01)" data-channel="nightly" data-search-js="search-5c29b3b5.js" data-stringdex-js="stringdex-c3e638e9.js" data-settings-js="settings-c38705f0.js" ><script src="../static.files/storage-e2aeef58.js"></script><script defer src="sidebar-items.js"></script><script defer src="../static.files/main-ce535bd0.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-263c88ec.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-044be391.svg"></head><body class="rustdoc attr"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">test_casing</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../test_casing/index.html">test_<wbr>casing</a><span class="version">0.1.3</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">test_<wbr>casing</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#inputs" title="Inputs">Inputs</a></li><li><a href="#mapping-arguments" title="Mapping arguments">Mapping arguments</a></li><li><a href="#examples" title="Examples">Examples</a><ul><li><a href="#basic-usage" title="Basic usage">Basic usage</a></li><li><a href="#case-expressions" title="Case expressions">Case expressions</a></li><li><a href="#cartesian-product" title="Cartesian product">Cartesian product</a></li><li><a href="#reference-args" title="Reference args">Reference args</a></li><li><a href="#ignore-and-should_panic-attributes" title="`ignore` and `should_panic` attributes"><code>ignore</code> and <code>should_panic</code> attributes</a></li><li><a href="#async-tests" title="Async tests">Async tests</a></li></ul></li></ul></section><div id="rustdoc-modnav"><h2 class="in-crate"><a href="index.html">In crate test_<wbr>casing</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="index.html">test_casing</a></div><h1>Attribute Macro <span class="attr">test_<wbr>casing</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/test_casing_macro/lib.rs.html#27">Source</a> </span></div><pre class="rust item-decl"><code>#[test_casing]</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Flattens a parameterized test into a collection of test cases.</p>
+<h2 id="inputs"><a class="doc-anchor" href="#inputs">§</a>Inputs</h2>
+<p>This attribute must be placed on a freestanding function with 1..8 arguments.
+The attribute must be invoked with 2 values:</p>
+<ol>
+<li>Number of test cases, a number literal</li>
+<li>A <em>case iterator</em> expression evaluating to an implementation of <a href="https://doc.rust-lang.org/nightly/core/iter/traits/collect/trait.IntoIterator.html" title="trait core::iter::traits::collect::IntoIterator"><code>IntoIterator</code></a>
+with <a href="https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html" title="trait core::fmt::Debug"><code>Debug</code></a>gable, <code>'static</code> items.
+If the target function has a single argument, the iterator item type must equal to
+the argument type. Otherwise, the iterator must return a tuple in which each item
+corresponds to the argument with the same index.</li>
+</ol>
+<p>A case iterator expression may reference the environment (e.g., it can be a name of a constant).
+It doesn’t need to be a constant expression (e.g., it may allocate in heap). It should
+return at least the number of items specified as the first attribute argument, and can
+return more items; these additional items will not be tested.</p>
+<h2 id="mapping-arguments"><a class="doc-anchor" href="#mapping-arguments">§</a>Mapping arguments</h2>
+<p>To support more idiomatic signatures for parameterized test functions, it is possible
+to <em>map</em> from the type returned by the case iterator. The only supported kind of mapping
+so far is taking a shared reference (i.e., <code>T</code> → <code>&amp;T</code>). The mapping is enabled by placing
+the <code>#[map(ref)]</code> attribute on the corresponding argument. Optionally, the reference <code>&amp;T</code>
+can be further mapped with a function / method (e.g., <code>&amp;String</code> → <code>&amp;str</code> with
+<a href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html#method.as_str" title="method alloc::string::String::as_str"><code>String::as_str()</code></a>). This is specified as <code>#[map(ref = path::to::method)]</code>, a la
+<code>serde</code> transforms.</p>
+<h2 id="examples"><a class="doc-anchor" href="#examples">§</a>Examples</h2><h3 id="basic-usage"><a class="doc-anchor" href="#basic-usage">§</a>Basic usage</h3>
+<p><code>test_casing</code> macro accepts 2 args: number of cases and the iterator expression.
+The latter can be any valid Rust expression.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[test_casing(<span class="number">5</span>, <span class="number">0</span>..<span class="number">5</span>)]
+</span><span class="comment">// #[test] attribute is optional and is added automatically
+// provided that the test function is not `async`.
+</span><span class="kw">fn </span>number_is_small(number: i32) {
+    <span class="macro">assert!</span>(number &lt; <span class="number">10</span>);
+}</code></pre></div>
+<p>Functions returning <code>Result</code>s are supported as well.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>std::error::Error;
+
+<span class="attr">#[test_casing(<span class="number">3</span>, [<span class="string">"0"</span>, <span class="string">"42"</span>, <span class="string">"-3"</span>]</span>)]
+<span class="kw">fn </span>parsing_numbers(s: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
+    <span class="kw">let </span>number: i32 = s.parse()<span class="question-mark">?</span>;
+    <span class="macro">assert!</span>(number.abs() &lt; <span class="number">100</span>);
+    <span class="prelude-val">Ok</span>(())
+}</code></pre></div>
+<p>The function on which the <code>test_casing</code> attribute is placed can be accessed from other code
+(e.g., for more tests):</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[test_casing(<span class="number">3</span>, [<span class="string">"0"</span>, <span class="string">"42"</span>, <span class="string">"-3"</span>]</span>)]
+<span class="kw">fn </span>parsing_numbers(s: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
+    <span class="comment">// snipped...
+</span>}
+
+<span class="attr">#[test]
+</span><span class="kw">fn </span>parsing_number_error() {
+    <span class="macro">assert!</span>(parsing_numbers(<span class="string">"?"</span>).is_err());
+}</code></pre></div>
+<p>The number of test cases is asserted in a separate generated test. This ensures that no cases
+are skipped by “underreporting” this count (e.g., if the test cases expression is extended).</p>
+<h3 id="case-expressions"><a class="doc-anchor" href="#case-expressions">§</a>Case expressions</h3>
+<p>Case expressions can be extracted to a constant for reuse or better code structuring.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">const </span>CASES: TestCases&lt;(String, i32)&gt; = <span class="macro">cases!</span> {
+    [<span class="number">0</span>, <span class="number">42</span>, -<span class="number">3</span>].map(|i| (i.to_string(), i))
+};
+
+<span class="attr">#[test_casing(<span class="number">3</span>, CASES)]
+</span><span class="kw">fn </span>parsing_numbers(s: String, expected: i32) {
+    <span class="kw">let </span>parsed: i32 = s.parse().unwrap();
+    <span class="macro">assert_eq!</span>(parsed, expected);
+}</code></pre></div>
+<p>This example also shows that semantics of args is up to the writer; some of the args may be
+expected values, etc.</p>
+<h3 id="cartesian-product"><a class="doc-anchor" href="#cartesian-product">§</a>Cartesian product</h3>
+<p>One of possible case expressions is a <a href="struct.Product.html" title="struct test_casing::Product"><code>Product</code></a>; it can be used to generate test cases
+as a Cartesian product of the expressions for separate args.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[test_casing(<span class="number">6</span>, Product((<span class="number">0_usize</span>..<span class="number">3</span>, [<span class="string">"foo"</span>, <span class="string">"bar"</span>]</span>)))]
+<span class="kw">fn </span>numbers_and_strings(number: usize, s: <span class="kw-2">&amp;</span>str) {
+    <span class="macro">assert!</span>(s.len() &lt;= number);
+}</code></pre></div><h3 id="reference-args"><a class="doc-anchor" href="#reference-args">§</a>Reference args</h3>
+<p>It is possible to go from a generated argument to its reference by adding
+a <code>#[map(ref)]</code> attribute on the argument. The attribute may optionally specify
+a path to the transform function from the reference to the desired type
+(similar to transform specifications in the <a href="https://docs.rs/serde/"><code>serde</code></a> attr).</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">const </span>CASES: TestCases&lt;(String, i32)&gt; = <span class="macro">cases!</span> {
+    [<span class="number">0</span>, <span class="number">42</span>, -<span class="number">3</span>].map(|i| (i.to_string(), i))
+};
+
+<span class="attr">#[test_casing(<span class="number">3</span>, CASES)]
+</span><span class="kw">fn </span>parsing_numbers(<span class="attr">#[map(<span class="kw-2">ref</span>)] </span>s: <span class="kw-2">&amp;</span>str, expected: i32) {
+    <span class="comment">// Snipped...
+</span>}
+
+<span class="attr">#[test_casing(<span class="number">3</span>, CASES)]
+</span><span class="kw">fn </span>parsing_numbers_too(
+    <span class="attr">#[map(<span class="kw-2">ref </span>= String::as_str)] </span>s: <span class="kw-2">&amp;</span>str,
+    expected: i32,
+) {
+    <span class="comment">// Snipped...
+</span>}</code></pre></div><h3 id="ignore-and-should_panic-attributes"><a class="doc-anchor" href="#ignore-and-should_panic-attributes">§</a><code>ignore</code> and <code>should_panic</code> attributes</h3>
+<p><code>ignore</code> or <code>should_panic</code> attributes can be specified below the <code>test_casing</code> attribute.
+They will apply to all generated tests.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[test_casing(<span class="number">3</span>, [<span class="string">"not"</span>, <span class="string">"implemented"</span>, <span class="string">"yet"</span>]</span>)]
+<span class="attr">#[ignore = <span class="string">"Promise this will work sometime"</span>]
+</span><span class="kw">fn </span>future_test(s: <span class="kw-2">&amp;</span>str) {
+    <span class="macro">unimplemented!</span>()
+}
+
+<span class="attr">#[test_casing(<span class="number">3</span>, [<span class="string">"not a number"</span>, <span class="string">"-"</span>, <span class="string">""</span>]</span>)]
+<span class="attr">#[should_panic(expected = <span class="string">"ParseIntError"</span>)]
+</span><span class="kw">fn </span>string_conversion_fail(bogus_str: <span class="kw-2">&amp;</span>str) {
+    bogus_str.parse::&lt;i32&gt;().unwrap();
+}</code></pre></div><h3 id="async-tests"><a class="doc-anchor" href="#async-tests">§</a>Async tests</h3>
+<p><code>test_casing</code> supports all kinds of async test wrappers, such as <code>async_std::test</code>,
+<code>tokio::test</code>, <code>actix::test</code> etc. The corresponding attribute just needs to be specified
+<em>below</em> the <code>test_casing</code> attribute.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[test_casing(<span class="number">3</span>, [<span class="string">"0"</span>, <span class="string">"42"</span>, <span class="string">"-3"</span>]</span>)]
+<span class="attr">#[async_std::test]
+</span><span class="kw">async fn </span>parsing_numbers(s: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
+    <span class="macro">assert!</span>(s.parse::&lt;i32&gt;()<span class="question-mark">?</span>.abs() &lt; <span class="number">100</span>);
+    <span class="prelude-val">Ok</span>(())
+}</code></pre></div></div></details></section></div></main></body></html>
