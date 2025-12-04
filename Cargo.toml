@@ -20,7 +20,7 @@ quote = "1.0"
 rand = "0.9.2"
 syn = "2.0"
 tokio = "1.48.0"
-trybuild = "1.0.113"
+trybuild = "1.0.114"
 version-sync = "0.9.4"
 
 # Workspace dependencies
