@@ -229,7 +229,6 @@
 /// }
 /// ```
 pub use test_casing_macro::decorate;
-
 /// Flattens a parameterized test into a collection of test cases.
 ///
 /// # Inputs
@@ -309,6 +308,9 @@ pub use test_casing_macro::decorate;
 ///     assert!(parsing_numbers("?").is_err());
 /// }
 /// ```
+///
+/// The number of test cases is asserted in a separate generated test. This ensures that no cases
+/// are skipped by "underreporting" this count (e.g., if the test cases expression is extended).
 ///
 /// ## Case expressions
 ///
@@ -414,4 +416,4 @@ pub mod decorators;
 pub mod nightly;
 mod test_casing;
 
-pub use crate::test_casing::{case, ArgNames, Product, ProductIter, TestCases};
+pub use crate::test_casing::{assert_case_count, case, ArgNames, Product, ProductIter, TestCases};

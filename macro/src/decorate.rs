@@ -1,5 +1,7 @@
 //! `decorate` proc macro implementation.
 
+use std::fmt;
+
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{
@@ -8,8 +10,6 @@ use syn::{
     spanned::Spanned,
     Error as SynError, Expr, Item, ItemFn, ReturnType, Token,
 };
-
-use std::fmt;
 
 struct DecorateAttrs {
     decorators: Vec<Expr>,
