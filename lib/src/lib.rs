@@ -414,6 +414,27 @@ pub mod decorators;
 #[cfg(feature = "nightly")]
 #[doc(hidden)] // used by the `#[test_casing]` macro; logically private
 pub mod nightly;
+mod no_traces;
 mod test_casing;
 
-pub use crate::test_casing::{assert_case_count, case, ArgNames, Product, ProductIter, TestCases};
+pub use crate::test_casing::{Product, ProductIter, TestCases};
+
+#[doc(hidden)] // only should be used by proc macros
+pub mod _private {
+    pub use crate::{
+        no_traces::ArgNames,
+        test_casing::{assert_case_count, case},
+    };
+
+    #[macro_export]
+    #[doc(hidden)] // Used in the proc macros; logically private
+    macro_rules! __describe_test_case {
+        ($name:tt, $index:tt, $($arg:tt = $val:expr,)+) => {
+            ::std::println!(
+                "Testing case #{}: {}",
+                $index,
+                $crate::_private::ArgNames::print_with_args([$($arg,)+], ($(&$val,)+))
+            );
+        };
+    }
+}

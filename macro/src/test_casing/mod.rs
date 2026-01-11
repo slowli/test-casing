@@ -252,7 +252,7 @@ impl FunctionWrapper {
             const _: () = {
                 #[allow(dead_code, clippy::no_effect_underscore_binding)]
                 fn __test_cases_iterator() {
-                    let #case_binding = #cr::case(#cases_expr, 0);
+                    let #case_binding = #cr::_private::case(#cases_expr, 0);
                     #maybe_output_binding #name(#case_args);
                 }
             };
@@ -279,7 +279,7 @@ impl FunctionWrapper {
         let case_count_assert = quote! {
             #[test]
             fn case_count_is_correct() {
-                #cr::assert_case_count(#cases_expr, #count);
+                #cr::_private::assert_case_count(#cases_expr, #count);
             }
         };
 
@@ -380,11 +380,11 @@ impl FunctionWrapper {
 
         let case_assignment = if cfg!(feature = "nightly") {
             quote! {
-                let #case_binding = #cr::case(#cases_expr, #index);
+                let #case_binding = #cr::_private::case(#cases_expr, #index);
             }
         } else {
             quote! {
-                let __case = #cr::case(#cases_expr, #index);
+                let __case = #cr::_private::case(#cases_expr, #index);
                 let #case_binding = __case;
             }
         };

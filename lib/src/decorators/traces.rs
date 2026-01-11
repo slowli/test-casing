@@ -2,7 +2,7 @@
 
 use core::fmt;
 
-use tracing::{level_filters::LevelFilter, Event, Subscriber};
+use tracing::{level_filters::LevelFilter, Dispatch, Event, Subscriber};
 use tracing_subscriber::{
     field::RecordFields,
     fmt::{format, format::Writer, FmtContext, FormatEvent, FormatFields, TestWriter},
@@ -128,7 +128,7 @@ impl<R> DecorateTest<R> for Trace {
         let _guard = if self.global {
             if tracing::subscriber::set_global_default(subscriber).is_err() {
                 let is_test_subscriber =
-                    tracing::dispatcher::get_default(|dispatch| dispatch.is::<TestSubscriber>());
+                    tracing::dispatcher::get_default(Dispatch::is::<TestSubscriber>);
                 if !is_test_subscriber {
                     tracing::warn!("could not set up global tracing subscriber");
                 }
