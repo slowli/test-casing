@@ -1,6 +1,7 @@
 //! Tracing decorators.
 
 use core::fmt;
+use std::env;
 
 use tracing::{level_filters::LevelFilter, Dispatch, Event, Subscriber};
 use tracing_subscriber::{
@@ -92,17 +93,17 @@ impl Trace {
         self
     }
 
-    fn create_subscriber(self) -> TestSubscriber {
+    /// Creates a subscriber based on these params.
+    pub fn create_subscriber(self) -> impl Subscriber + for<'a> LookupSpan<'a> {
+        self.create_subscriber_inner()
+    }
+
+    fn create_subscriber_inner(self) -> TestSubscriber {
+        let env = env::var("RUST_LOG").ok();
+        let env = env.as_deref().or(self.directives).unwrap_or_default();
         let env_filter = EnvFilter::builder()
-            .with_default_directive(self.directives.map_or_else(
-                || LevelFilter::INFO.into(),
-                |raw| {
-                    raw.parse().unwrap_or_else(|err| {
-                        panic!("invalid log directive `{raw}`: {err}");
-                    })
-                },
-            ))
-            .from_env_lossy();
+            .with_default_directive(LevelFilter::INFO.into())
+            .parse_lossy(env);
         FmtSubscriber::builder()
             .with_test_writer()
             .with_env_filter(env_filter)
@@ -124,7 +125,7 @@ impl Trace {
 
 impl<R> DecorateTest<R> for Trace {
     fn decorate_and_test<F: TestFn<R>>(&'static self, test_fn: F) -> R {
-        let subscriber = self.create_subscriber();
+        let subscriber = self.create_subscriber_inner();
         let _guard = if self.global {
             if tracing::subscriber::set_global_default(subscriber).is_err() {
                 let is_test_subscriber =
