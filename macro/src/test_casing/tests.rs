@@ -106,18 +106,15 @@ fn create_wrapper() -> FunctionWrapper {
 #[test]
 fn computing_arg_names() {
     let wrapper = create_wrapper();
-    let arg_names = wrapper.arg_names();
-    let arg_names: Item = syn::parse_quote!(#arg_names);
-    let expected: Item = syn::parse_quote! {
-        const __ARG_NAMES: [&'static str; 2usize] = ["number", "s",];
-    };
-    assert_eq!(arg_names, expected, "{}", quote!(#arg_names));
+    let arg_names: Vec<_> = wrapper.arg_names().collect();
+    assert_eq!(arg_names, ["number", "s"]);
 }
 
 #[test]
 fn computing_case_bindings() {
     let wrapper = create_wrapper();
-    let (case_binding, case_args) = wrapper.case_binding();
+    let (arg_idents, case_args) = wrapper.case_binding();
+    let case_binding = FunctionWrapper::group_idents(&arg_idents);
     let case_binding: Pat = syn::parse_quote!(#case_binding);
     let expected: Pat = syn::parse_quote!((__case_arg0, __case_arg1,));
     assert_eq!(case_binding, expected, "{}", quote!(#case_binding));

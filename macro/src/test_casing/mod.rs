@@ -218,10 +218,8 @@ impl FunctionWrapper {
             || attr.path().is_ident("forbid")
     }
 
-    fn arg_names(&self) -> impl ToTokens {
-        let arg_count = self.fn_sig.inputs.len();
-        let arg_names = self
-            .fn_sig
+    fn arg_names(&self) -> impl Iterator<Item = String> + '_ {
+        self.fn_sig
             .inputs
             .iter()
             .enumerate()
@@ -234,17 +232,15 @@ impl FunctionWrapper {
                         format!("(arg {i})")
                     }
                 }
-            });
-        quote! {
-            const __ARG_NAMES: [&'static str; #arg_count] = [#(#arg_names,)*];
-        }
+            })
     }
 
     fn test_cases_iter(&self) -> impl ToTokens {
         let cr = quote!(test_casing);
         let name = &self.name;
         let cases_expr = &self.attrs.expr;
-        let (case_binding, case_args) = self.case_binding();
+        let (arg_idents, case_args) = self.case_binding();
+        let case_binding = Self::group_idents(&arg_idents);
         let maybe_output_binding = match (&self.fn_sig.asyncness, &self.fn_sig.output) {
             (None, ReturnType::Default) => None,
             _ => Some(quote!(let _ = )),
@@ -267,6 +263,11 @@ impl FunctionWrapper {
         let name = &self.name;
         let test_cases_iter = self.test_cases_iter();
         let arg_names = self.arg_names();
+        let arg_count = self.fn_sig.inputs.len();
+        let arg_names = quote! {
+            const __ARG_NAMES: [&'static str; #arg_count] = [#(#arg_names,)*];
+        };
+
         let index_width = (self.attrs.count - 1).to_string().len();
         let cases = (0..self.attrs.count).map(|i| self.case(i, index_width));
 
@@ -374,7 +375,8 @@ impl FunctionWrapper {
             ReturnType::Type { .. } => None,
         };
         let cases_expr = &self.attrs.expr;
-        let (case_binding, case_args) = self.case_binding();
+        let (arg_idents, case_args) = self.case_binding();
+        let case_binding = Self::group_idents(&arg_idents);
 
         let case_assignment = if cfg!(feature = "nightly") {
             quote! {
@@ -383,19 +385,20 @@ impl FunctionWrapper {
         } else {
             quote! {
                 let __case = #cr::case(#cases_expr, #index);
-                println!(
-                    "Testing case #{}: {}",
-                    #index,
-                    #cr::ArgNames::print_with_args(__ARG_NAMES, &__case)
-                );
                 let #case_binding = __case;
             }
         };
+
+        let args = self
+            .arg_names()
+            .zip(arg_idents)
+            .map(|(name, arg)| quote!(#name = #arg));
 
         quote! {
             #(#attrs)*
             #maybe_async fn #case_name() #ret {
                 #case_assignment
+                let __guard = #cr::__describe_test_case!(#name, #index, #(#args,)*);
                 #name(#case_args) #maybe_await #maybe_semicolon
             }
         }
@@ -403,19 +406,18 @@ impl FunctionWrapper {
 
     /// Returns the binding of args supplied to the test case and potentially mapped args
     /// to provide to the test function.
-    fn case_binding(&self) -> (impl ToTokens, impl ToTokens) {
+    fn case_binding(&self) -> (Vec<Ident>, impl ToTokens) {
         if self.fn_sig.inputs.len() == 1 {
             let arg = self.fn_sig.inputs.first().unwrap();
             let arg = Ident::new("__case_arg", arg.span());
             let mapped_arg = self.arg_mappings[0]
                 .as_ref()
                 .map_or_else(|| quote!(#arg), |mapping| mapping.map_arg(&arg));
-            (quote!(#arg), mapped_arg)
+            (vec![arg], mapped_arg)
         } else {
             let args = self.fn_sig.inputs.iter().enumerate();
             let args = args.map(|(idx, arg)| Ident::new(&format!("__case_arg{idx}"), arg.span()));
-            let binding_args = args.clone();
-            let case_binding = quote!((#(#binding_args,)*));
+            let case_binding = args.clone().collect();
 
             let args = args.zip(&self.arg_mappings).map(|(arg, mapping)| {
                 mapping
@@ -424,6 +426,16 @@ impl FunctionWrapper {
             });
             let case_args = quote!(#(#args,)*);
             (case_binding, case_args)
+        }
+    }
+
+    fn group_idents(arg_idents: &[Ident]) -> impl ToTokens {
+        if arg_idents.len() == 1 {
+            let arg = &arg_idents[0];
+            quote!(#arg)
+        } else {
+            let arg_idents = arg_idents.iter();
+            quote!((#(#arg_idents,)*))
         }
     }
 }

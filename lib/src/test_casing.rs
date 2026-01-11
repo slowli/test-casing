@@ -35,22 +35,28 @@ pub fn assert_case_count(iter: impl IntoIterator, expected_count: usize) {
     );
 }
 
-/// Allows printing named arguments together with their values to a `String`.
-#[doc(hidden)] // used by the `#[test_casing]` macro; logically private
-pub trait ArgNames<T: fmt::Debug>: Copy + IntoIterator<Item = &'static str> {
-    fn print_with_args(self, args: &T) -> String;
+#[macro_export]
+#[doc(hidden)] // Used in the proc macros; logically private
+macro_rules! __describe_test_case {
+    ($name:tt, $index:tt, $($arg:tt = $val:expr,)+) => {
+        ::std::println!(
+            "Testing case #{}: {}",
+            $index,
+            $crate::ArgNames::print_with_args([$($arg,)+], ($(&$val,)+))
+        );
+    };
 }
 
-impl<T: fmt::Debug> ArgNames<T> for [&'static str; 1] {
-    fn print_with_args(self, args: &T) -> String {
-        format!("{name} = {args:?}", name = self[0])
-    }
+/// Allows printing named arguments together with their values to a `String`.
+#[doc(hidden)] // used by the `__describe_test_case!` macro; logically private
+pub trait ArgNames<T: fmt::Debug>: Copy + IntoIterator<Item = &'static str> {
+    fn print_with_args(self, args: T) -> String;
 }
 
 macro_rules! impl_arg_names {
     ($n:tt => $($idx:tt: $arg_ty:ident),+) => {
         impl<$($arg_ty : fmt::Debug,)+> ArgNames<($($arg_ty,)+)> for [&'static str; $n] {
-            fn print_with_args(self, args: &($($arg_ty,)+)) -> String {
+            fn print_with_args(self, args: ($($arg_ty,)+)) -> String {
                 use std::fmt::Write as _;
 
                 let mut buffer = String::new();
@@ -63,9 +69,10 @@ macro_rules! impl_arg_names {
                 buffer
             }
         }
-    };
+    }
 }
 
+impl_arg_names!(1 => 0: T);
 impl_arg_names!(2 => 0: T, 1: U);
 impl_arg_names!(3 => 0: T, 1: U, 2: V);
 impl_arg_names!(4 => 0: T, 1: U, 2: V, 3: W);
