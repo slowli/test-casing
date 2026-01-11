@@ -13,6 +13,9 @@ description = "Parameterized test cases and test decorators"
 
 [dependencies]
 once_cell = { workspace = true, optional = true }
+tracing = { workspace = true, optional = true }
+tracing-subscriber = { workspace = true, optional = true, features = ["env-filter"] }
+
 test-casing-macro.workspace = true
 
 [dev-dependencies]
@@ -24,6 +27,8 @@ version-sync.workspace = true
 
 [features]
 default = []
+# Enables tracing decorators and tracing in tests.
+tracing = ["dep:tracing", "dep:tracing-subscriber"]
 # Uses custom test frameworks APIs together with a generous spicing of hacks
 # to include arguments in the names of the generated tests.
-nightly = ["test-casing-macro/nightly", "once_cell"]
+nightly = ["test-casing-macro/nightly", "dep:once_cell"]

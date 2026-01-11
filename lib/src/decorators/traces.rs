@@ -1,0 +1,142 @@
+//! Tracing decorators.
+
+use core::fmt;
+
+use tracing::{level_filters::LevelFilter, Event, Subscriber};
+use tracing_subscriber::{
+    field::RecordFields,
+    fmt::{format, format::Writer, FmtContext, FormatEvent, FormatFields, TestWriter},
+    registry::LookupSpan,
+    EnvFilter, FmtSubscriber,
+};
+
+use crate::decorators::{DecorateTest, TestFn};
+
+#[derive(Debug)]
+enum Either<L, R> {
+    Left(L),
+    Right(R),
+}
+
+impl<'w, L, R> FormatFields<'w> for Either<L, R>
+where
+    L: FormatFields<'w>,
+    R: FormatFields<'w>,
+{
+    fn format_fields<F: RecordFields>(&self, writer: Writer<'w>, fields: F) -> fmt::Result {
+        match self {
+            Self::Left(formatter) => formatter.format_fields(writer, fields),
+            Self::Right(formatter) => formatter.format_fields(writer, fields),
+        }
+    }
+}
+
+impl<S, N, L, R> FormatEvent<S, N> for Either<L, R>
+where
+    S: Subscriber + for<'a> LookupSpan<'a>,
+    N: for<'a> FormatFields<'a> + 'static,
+    L: FormatEvent<S, N>,
+    R: FormatEvent<S, N>,
+{
+    fn format_event(
+        &self,
+        ctx: &FmtContext<'_, S, N>,
+        writer: Writer<'_>,
+        event: &Event<'_>,
+    ) -> fmt::Result {
+        match self {
+            Self::Left(formatter) => formatter.format_event(ctx, writer, event),
+            Self::Right(formatter) => formatter.format_event(ctx, writer, event),
+        }
+    }
+}
+
+type TestSubscriber = FmtSubscriber<
+    Either<format::Pretty, format::DefaultFields>,
+    Either<format::Format<format::Pretty>, format::Format>,
+    EnvFilter,
+    TestWriter,
+>;
+
+/// Decorator that enables
+#[derive(Debug, Clone, Copy)]
+pub struct Trace {
+    directives: Option<&'static str>,
+    pretty: bool,
+    global: bool,
+}
+
+impl Trace {
+    /// Creates a decorator with the specified directives. The directives can be overridden by the `RUST_LOG`
+    /// env variable in runtime.
+    pub const fn new(directives: &'static str) -> Self {
+        Self {
+            directives: Some(directives),
+            pretty: false,
+            global: false,
+        }
+    }
+
+    /// Enables pretty formatting for the tracing events.
+    #[must_use]
+    pub const fn pretty(mut self) -> Self {
+        self.pretty = true;
+        self
+    }
+
+    /// Sets up the tracing subscriber globally (vs the default thread-local setup).
+    /// This is only beneficial for multithreaded tests, and may have undesired side effects.
+    #[must_use]
+    pub const fn global(mut self) -> Self {
+        self.global = true;
+        self
+    }
+
+    fn create_subscriber(self) -> TestSubscriber {
+        let env_filter = EnvFilter::builder()
+            .with_default_directive(self.directives.map_or_else(
+                || LevelFilter::INFO.into(),
+                |raw| {
+                    raw.parse().unwrap_or_else(|err| {
+                        panic!("invalid log directive `{raw}`: {err}");
+                    })
+                },
+            ))
+            .from_env_lossy();
+        FmtSubscriber::builder()
+            .with_test_writer()
+            .with_env_filter(env_filter)
+            .fmt_fields(if self.pretty {
+                Either::Left(format::Pretty::default())
+            } else {
+                Either::Right(format::DefaultFields::default())
+            })
+            .map_event_format(|fmt| {
+                if self.pretty {
+                    Either::Left(fmt.pretty())
+                } else {
+                    Either::Right(fmt)
+                }
+            })
+            .finish()
+    }
+}
+
+impl<R> DecorateTest<R> for Trace {
+    fn decorate_and_test<F: TestFn<R>>(&'static self, test_fn: F) -> R {
+        let subscriber = self.create_subscriber();
+        let _guard = if self.global {
+            if tracing::subscriber::set_global_default(subscriber).is_err() {
+                let is_test_subscriber =
+                    tracing::dispatcher::get_default(|dispatch| dispatch.is::<TestSubscriber>());
+                if !is_test_subscriber {
+                    tracing::warn!("could not set up global tracing subscriber");
+                }
+            }
+            None
+        } else {
+            Some(tracing::subscriber::set_default(subscriber))
+        };
+        test_fn()
+    }
+}

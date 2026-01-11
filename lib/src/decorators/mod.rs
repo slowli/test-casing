@@ -25,6 +25,12 @@ use std::{
     time::Duration,
 };
 
+#[cfg(feature = "tracing")]
+pub use self::traces::Trace;
+
+#[cfg(feature = "tracing")]
+mod traces;
+
 /// Tested function or closure.
 ///
 /// This trait is automatically implemented for all functions without arguments.
