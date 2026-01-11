@@ -1,6 +1,6 @@
 # Parameterized Rust Tests & Test Decorators
 
-[![Build Status](https://github.com/slowli/test-casing/workflows/CI/badge.svg?branch=main)](https://github.com/slowli/test-casing/actions)
+[![Build status](https://github.com/slowli/test-casing/actions/workflows/ci.yml/badge.svg)](https://github.com/slowli/test-casing/actions/workflows/ci.yml)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%2FApache--2.0-blue)](https://github.com/slowli/test-casing#license)
 ![rust 1.82+ required](https://img.shields.io/badge/rust-1.82+-blue.svg?label=Required%20Rust)
 
