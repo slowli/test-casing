@@ -236,7 +236,7 @@ impl FunctionWrapper {
     }
 
     fn test_cases_iter(&self) -> impl ToTokens {
-        let cr = quote!(test_casing);
+        let cr = quote!(::test_casing);
         let name = &self.name;
         let cases_expr = &self.attrs.expr;
         let (arg_idents, case_args) = self.case_binding();
@@ -275,7 +275,7 @@ impl FunctionWrapper {
         // Since this is impossible on stable Rust, we do the next best thing - generating a dedicated test for this.
         let count = self.attrs.count;
         let cases_expr = &self.attrs.expr;
-        let cr = quote!(test_casing);
+        let cr = quote!(::test_casing);
         let case_count_assert = quote! {
             #[test]
             fn case_count_is_correct() {
@@ -302,7 +302,7 @@ impl FunctionWrapper {
 
     #[cfg(feature = "nightly")]
     fn declare_test_case(&self, index: usize, test_fn_name: &Ident) -> impl ToTokens {
-        let cr = quote!(test_casing);
+        let cr = quote!(::test_casing);
         let cases_expr = &self.attrs.expr;
         let test_case_name = format!("__TEST_CASE_{index}");
         let test_case_name = Ident::new(&test_case_name, self.name.span());
@@ -363,7 +363,7 @@ impl FunctionWrapper {
     }
 
     fn case_fn(&self, index: usize, case_name: &Ident) -> proc_macro2::TokenStream {
-        let cr = quote!(test_casing);
+        let cr = quote!(::test_casing);
         let name = &self.name;
         let attrs = &self.fn_attrs;
 

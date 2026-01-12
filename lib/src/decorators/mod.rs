@@ -80,7 +80,7 @@ impl<R, F> TestFn<R> for F where F: Fn() -> R + panic::UnwindSafe + Send + Sync 
 ///     Err("oops, this test failed".into())
 /// }
 /// ```
-pub trait DecorateTest<R>: panic::RefUnwindSafe + Send + Sync + 'static {
+pub trait DecorateTest<R>: panic::RefUnwindSafe + Send + Sync + 'static + fmt::Debug {
     /// Decorates the provided test function and runs the test.
     fn decorate_and_test<F: TestFn<R>>(&'static self, test_fn: F) -> R;
 }
@@ -93,13 +93,17 @@ impl<R, T: DecorateTest<R>> DecorateTest<R> for &'static T {
 
 /// Object-safe version of [`DecorateTest`].
 #[doc(hidden)] // used in the `decorate` proc macro; logically private
-pub trait DecorateTestFn<R>: panic::RefUnwindSafe + Send + Sync + 'static {
+pub trait DecorateTestFn<R>: panic::RefUnwindSafe + Send + Sync + 'static + fmt::Debug {
     fn decorate_and_test_fn(&'static self, test_fn: fn() -> R) -> R;
 }
 
 impl<R: 'static, T: DecorateTest<R>> DecorateTestFn<R> for T {
     fn decorate_and_test_fn(&'static self, test_fn: fn() -> R) -> R {
-        self.decorate_and_test(test_fn)
+        self.decorate_and_test(move || {
+            #[cfg(feature = "tracing")]
+            tracing::info!(decorators = ?self, "running decorated test");
+            test_fn()
+        })
     }
 }
 
