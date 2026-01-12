@@ -15,8 +15,7 @@
 //! See [`decorate`](crate::decorate) macro docs for the examples of usage.
 
 use std::{
-    any::Any,
-    fmt, panic,
+    any, fmt, panic,
     sync::{
         mpsc::{self, RecvTimeoutError},
         Mutex, PoisonError,
@@ -204,11 +203,17 @@ impl Retry {
         }
     }
 
-    fn handle_panic(&self, attempt: usize, panic_object: Box<dyn Any + Send>) {
+    fn handle_panic(&self, attempt: usize, panic_object: Box<dyn any::Any + Send>) {
         if attempt < self.times {
             let panic_str = extract_panic_str(&panic_object).unwrap_or("");
-            let punctuation = if panic_str.is_empty() { "" } else { ": " };
-            println!("Test attempt #{attempt} panicked{punctuation}{panic_str}");
+
+            #[cfg(not(feature = "tracing"))]
+            println!(
+                "Test attempt #{attempt} panicked{punctuation}{panic_str}",
+                punctuation = if panic_str.is_empty() { "" } else { ": " }
+            );
+            #[cfg(feature = "tracing")]
+            tracing::warn!(panic = panic_str, "test attempt panicked");
         } else {
             panic::resume_unwind(panic_object);
         }
@@ -220,12 +225,19 @@ impl Retry {
         should_retry: fn(&E) -> bool,
     ) -> Result<(), E> {
         for attempt in 0..=self.times {
+            #[cfg(not(feature = "tracing"))]
             println!("Test attempt #{attempt}");
+            #[cfg(feature = "tracing")]
+            let _span_guard = tracing::info_span!("test_attempt", attempt).entered();
+
             match panic::catch_unwind(test_fn) {
                 Ok(Ok(())) => return Ok(()),
                 Ok(Err(err)) => {
                     if attempt < self.times && should_retry(&err) {
+                        #[cfg(not(feature = "tracing"))]
                         println!("Test attempt #{attempt} errored: {err}");
+                        #[cfg(feature = "tracing")]
+                        tracing::warn!(%err, "test attempt errored");
                     } else {
                         return Err(err);
                     }
@@ -245,7 +257,11 @@ impl Retry {
 impl DecorateTest<()> for Retry {
     fn decorate_and_test<F: TestFn<()>>(&self, test_fn: F) {
         for attempt in 0..=self.times {
+            #[cfg(not(feature = "tracing"))]
             println!("Test attempt #{attempt}");
+            #[cfg(feature = "tracing")]
+            let _span_guard = tracing::info_span!("test_attempt", attempt).entered();
+
             match panic::catch_unwind(test_fn) {
                 Ok(()) => break,
                 Err(panic_object) => {
@@ -268,7 +284,7 @@ impl<E: fmt::Display> DecorateTest<Result<(), E>> for Retry {
     }
 }
 
-fn extract_panic_str(panic_object: &(dyn Any + Send)) -> Option<&str> {
+fn extract_panic_str(panic_object: &(dyn any::Any + Send)) -> Option<&str> {
     if let Some(panic_str) = panic_object.downcast_ref::<&'static str>() {
         Some(panic_str)
     } else if let Some(panic_string) = panic_object.downcast_ref::<String>() {
@@ -378,7 +394,11 @@ impl Sequence {
     ) -> R {
         let mut guard = self.failed.lock().unwrap_or_else(PoisonError::into_inner);
         if *guard && self.abort_on_failure {
+            #[cfg(not(feature = "tracing"))]
             println!("Skipping test because a previous test in the same sequence has failed");
+            #[cfg(feature = "tracing")]
+            tracing::info!("skipping test because a previous test in the same sequence has failed");
+
             return ok_value;
         }
 
