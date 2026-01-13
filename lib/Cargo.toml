@@ -11,6 +11,11 @@ keywords = ["testing", "parameterized", "case", "decorator"]
 categories = ["development-tools::testing"]
 description = "Parameterized test cases and test decorators"
 
+[package.metadata.docs.rs]
+features = ["tracing"]
+# Set `docsrs` to enable unstable `doc(cfg(...))` attributes.
+rustdoc-args = ["--cfg", "docsrs"]
+
 [dependencies]
 once_cell = { workspace = true, optional = true }
 tracing = { workspace = true, optional = true }

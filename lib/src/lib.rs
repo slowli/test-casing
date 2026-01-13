@@ -104,11 +104,19 @@
 //! the feature may break. See [the CI config] for the nightly toolchain version the crate
 //! is tested against.
 //!
+//! ## `tracing`
+//!
+//! *(Off by default)*
+//!
+//! Enables tracing / logging using [the `tracing` library](https://docs.rs/tracing/). This includes
+//! the [`Trace`](decorators::Trace) decorator.
+//!
 //! [custom test frameworks]: https://github.com/rust-lang/rust/issues/50297
 //! [the CI config]: https://github.com/slowli/test-casing/blob/main/.github/workflows/ci.yml
 
 #![cfg_attr(feature = "nightly", feature(custom_test_frameworks, test))]
 // Documentation settings
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc(html_root_url = "https://docs.rs/test-casing/0.1.3")]
 // Linter settings
 #![warn(missing_debug_implementations, missing_docs, bare_trait_objects)]

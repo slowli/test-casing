@@ -1,7 +1,6 @@
 //! Tracing decorators.
 
-use core::fmt;
-use std::env;
+use std::{env, fmt};
 
 use tracing::{level_filters::LevelFilter, Dispatch, Event, Subscriber};
 use tracing_subscriber::{
@@ -59,7 +58,26 @@ type TestSubscriber = FmtSubscriber<
     TestWriter,
 >;
 
-/// Decorator that enables
+/// Decorator that enables tracing for tests.
+///
+/// # Examples
+///
+/// ```no_run
+/// use test_casing::{decorate, decorators::Trace};
+///
+/// // Tracing output configuration. Allows to specify the default log directives
+/// // (can be overridden by the `RUST_LOG` env var in the runtime), and to configure
+/// // more concise or pretty output.
+/// static TRACE: Trace = Trace::new("info,test_crate=trace").pretty();
+///
+/// #[decorate(TRACE)]
+/// #[test]
+/// fn some_test() {
+///     // Test logic...
+///     tracing::info!("logging event");
+/// }
+/// ```
+#[cfg_attr(docsrs, doc(cfg(feature = "tracing")))]
 #[derive(Debug, Clone, Copy)]
 pub struct Trace {
     directives: Option<&'static str>,
@@ -93,7 +111,8 @@ impl Trace {
         self
     }
 
-    /// Creates a subscriber based on these params.
+    /// Creates a subscriber based on the configured params. This is useful in order to reuse [`Trace`]
+    /// logic in more complex decorators (e.g., ones that capture tracing spans / events).
     pub fn create_subscriber(self) -> impl Subscriber + for<'a> LookupSpan<'a> {
         self.create_subscriber_inner()
     }
