@@ -22,6 +22,7 @@ test-casing-macro.workspace = true
 doc-comment.workspace = true
 rand.workspace = true
 tokio = { workspace = true, features = ["rt", "macros", "time"] }
+tracing-capture.workspace = true
 trybuild.workspace = true
 version-sync.workspace = true
 
@@ -32,3 +33,7 @@ tracing = ["dep:tracing", "dep:tracing-subscriber"]
 # Uses custom test frameworks APIs together with a generous spicing of hacks
 # to include arguments in the names of the generated tests.
 nightly = ["test-casing-macro/nightly", "dep:once_cell"]
+
+[[test]]
+name = "traces"
+required-features = ["tracing"]
