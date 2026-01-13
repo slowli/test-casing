@@ -507,15 +507,17 @@ pub mod _private {
     #[doc(hidden)] // Used in the proc macros; logically private
     macro_rules! __describe_test_case {
         ($name:tt, $index:tt, $($arg:tt = $val:expr,)+) => {{
+            const TARGET: &'static str = $crate::_private::parent_module(::core::module_path!(), ::core::stringify!($name));
+
             let _guard = $crate::_private::info_span!(
-                target: $crate::_private::parent_module(::core::module_path!(), ::core::stringify!($name)),
+                target: TARGET,
                 ::core::stringify!($name),
                 case.index = $index,
                 $($arg = ?$val,)+
             )
             .entered();
 
-            $crate::_private::info!("started test");
+            $crate::_private::info!(target: TARGET, "started test");
             _guard
         }}
     }

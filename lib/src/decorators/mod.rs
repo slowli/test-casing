@@ -209,7 +209,7 @@ impl Retry {
 
     fn handle_panic(&self, attempt: usize, panic_object: Box<dyn any::Any + Send>) {
         if attempt < self.times {
-            let panic_str = extract_panic_str(&panic_object).unwrap_or("");
+            let panic_str = extract_panic_str(panic_object.as_ref()).unwrap_or("");
 
             #[cfg(not(feature = "tracing"))]
             println!(
@@ -624,5 +624,23 @@ mod tests {
         static DECORATORS: &dyn DecorateTestFn<()> = &(&SEQUENCE,);
 
         DECORATORS.decorate_and_test_fn(|| {});
+    }
+
+    #[test]
+    fn extracting_panic() {
+        let value = 0;
+        let panic_obj = panic::catch_unwind(|| {
+            assert!(value > 1, "what");
+        })
+        .unwrap_err();
+
+        assert_eq!(extract_panic_str(panic_obj.as_ref()), Some("what"));
+
+        let panic_obj = panic::catch_unwind(|| {
+            assert!(value > 1, "what: {value}");
+        })
+        .unwrap_err();
+
+        assert_eq!(extract_panic_str(panic_obj.as_ref()), Some("what: 0"));
     }
 }
