@@ -25,7 +25,7 @@ Add this to your `Crate.toml`:
 
 ```toml
 [dev-dependencies]
-test-casing = "0.1.3"
+test-casing = "0.2.0-beta.1"
 ```
 
 ### Examples: test cases

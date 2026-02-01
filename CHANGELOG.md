@@ -5,6 +5,8 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## 0.2.0-beta.1 - 2026-02-01
+
 ### Added
 
 - Assert the test case count in a separate generated test. This protects against the scenario in which
