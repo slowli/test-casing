@@ -9,6 +9,8 @@ The project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 
 - Assert the test case count in a separate generated test. This protects against the scenario in which
   the number of test cases is increased, but the `test_casing` arg isn't updated.
+- Add tracing decorator and output case info via `tracing` (rather than via printing it to stdout)
+  if the corresponding crate feature is enabled.
 
 ### Changed
 
