@@ -134,7 +134,8 @@ fn generating_case() {
 
     let expected: ItemFn = syn::parse_quote! {
         fn case0() {
-            let (__case_arg0, __case_arg1,) = test_casing::case(CASES, 0usize);
+            let (__case_arg0 , __case_arg1,) = ::test_casing::_private::case(CASES, 0usize);
+            let __guard = ::test_casing::__describe_test_case!(tested_fn, 0usize, "number" = __case_arg0, "s" = __case_arg1,);
             tested_fn(__case_arg0, &__case_arg1,);
         }
     };
@@ -152,13 +153,9 @@ fn generating_case() {
     let expected: ItemFn = syn::parse_quote! {
         #[::core::prelude::v1::test]
         fn case0() {
-            let __case = test_casing::case(CASES, 0usize);
-            println!(
-                "Testing case #{}: {}",
-                0usize,
-                test_casing::ArgNames::print_with_args(__ARG_NAMES, &__case)
-            );
+            let __case = ::test_casing::_private::case(CASES, 0usize);
             let (__case_arg0, __case_arg1,) = __case;
+            let __guard = ::test_casing::__describe_test_case!(tested_fn, 0usize, "number" = __case_arg0, "s" = __case_arg1,);
             tested_fn(__case_arg0, &__case_arg1,);
         }
     };
