@@ -418,12 +418,12 @@ pub use test_casing_macro::decorate;
 /// ```
 pub use test_casing_macro::test_casing;
 
+#[cfg(any(feature = "nightly", not(feature = "tracing")))]
+mod arg_names;
 pub mod decorators;
 #[cfg(feature = "nightly")]
 #[doc(hidden)] // used by the `#[test_casing]` macro; logically private
 pub mod nightly;
-#[cfg(not(feature = "tracing"))]
-mod no_traces;
 mod test_casing;
 
 pub use crate::test_casing::{Product, ProductIter, TestCases};
@@ -434,13 +434,20 @@ pub mod _private {
     pub use tracing::{info, info_span};
 
     #[cfg(not(feature = "tracing"))]
-    pub use crate::no_traces::ArgNames;
+    pub use crate::arg_names::ArgNames;
     pub use crate::test_casing::{assert_case_count, case};
 
     #[cfg(not(feature = "tracing"))]
     #[macro_export]
     #[doc(hidden)] // Used in the proc macros; logically private
     macro_rules! __describe_test_case {
+        ($name:tt, $index:tt, $arg:tt = $val:expr,) => {
+            ::std::println!(
+                "Testing case #{}: {}",
+                $index,
+                $crate::_private::ArgNames::print_with_args([$arg], $val)
+            );
+        };
         ($name:tt, $index:tt, $($arg:tt = $val:expr,)+) => {
             ::std::println!(
                 "Testing case #{}: {}",

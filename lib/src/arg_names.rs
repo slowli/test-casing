@@ -1,4 +1,6 @@
-use std::fmt;
+//! `ArgNames` trait.
+
+use core::fmt;
 
 /// Allows printing named arguments together with their values to a `String`.
 #[doc(hidden)] // used by the `__describe_test_case!` macro; logically private
@@ -25,7 +27,12 @@ macro_rules! impl_arg_names {
     }
 }
 
-impl_arg_names!(1 => 0: T);
+impl<T: fmt::Debug> ArgNames<T> for [&'static str; 1] {
+    fn print_with_args(self, args: T) -> String {
+        format!("{} = {args:?}", self[0])
+    }
+}
+
 impl_arg_names!(2 => 0: T, 1: U);
 impl_arg_names!(3 => 0: T, 1: U, 2: V);
 impl_arg_names!(4 => 0: T, 1: U, 2: V, 3: W);

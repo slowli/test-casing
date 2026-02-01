@@ -47,13 +47,13 @@ impl ops::Deref for TestDescAndFn {
 pub fn create_test_description<T: fmt::Debug>(
     is_unit_test: bool,
     base_name: &'static str,
-    arg_names: impl crate::ArgNames<T>,
+    arg_names: impl crate::arg_names::ArgNames<T>,
     cases: impl IntoIterator<Item = T>,
     index: usize,
 ) -> TestDesc {
     let path_in_crate = base_name.split_once("::").map_or("", |(_, path)| path);
-    let test_args = crate::case(cases, index);
-    let description = arg_names.print_with_args(&test_args);
+    let test_args = crate::test_casing::case(cases, index);
+    let description = arg_names.print_with_args(test_args);
     TestDesc {
         name: TestName::DynTestName(format!("{path_in_crate}::case_{index} [{description}]")),
         ignore: false,

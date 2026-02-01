@@ -1,5 +1,7 @@
 //! Tests tracing functionality.
 
+#![cfg_attr(feature = "nightly", feature(test, custom_test_frameworks))]
+
 use std::{
     cell::Cell,
     error,
