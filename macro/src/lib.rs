@@ -9,10 +9,7 @@
 
 // Documentation settings
 #![doc(html_root_url = "https://docs.rs/test-casing-macro/0.1.3")]
-// Linter settings
-#![warn(missing_debug_implementations, bare_trait_objects)]
-#![warn(clippy::all, clippy::pedantic)]
-#![allow(clippy::must_use_candidate, clippy::module_name_repetitions)]
+#![allow(missing_docs)] // The macros are documented in the main crate
 
 extern crate proc_macro;
 

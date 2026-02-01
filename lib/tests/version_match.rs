@@ -1,3 +1,5 @@
+//! Checks matching crate version in the readme and `lib.rs`.
+
 use version_sync::{assert_html_root_url_updated, assert_markdown_deps_updated};
 
 #[test]

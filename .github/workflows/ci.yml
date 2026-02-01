@@ -12,10 +12,12 @@ env:
 
 jobs:
   build-msrv:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
@@ -23,7 +25,7 @@ jobs:
           toolchain: ${{ env.msrv }}
 
       - name: Cache cargo build
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: target
           key: ${{ runner.os }}-msrv-cargo-${{ hashFiles('**/Cargo.lock') }}
@@ -37,10 +39,12 @@ jobs:
         run: cargo test --workspace --doc
 
   build:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
@@ -54,7 +58,7 @@ jobs:
           version: "^0.18.9"
 
       - name: Cache cargo build
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
@@ -75,10 +79,12 @@ jobs:
         run: cargo test --workspace --doc
 
   build-nightly:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
@@ -87,7 +93,7 @@ jobs:
           components: clippy
 
       - name: Cache cargo build
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: target
           key: ${{ runner.os }}-nightly-cargo-${{ hashFiles('**/Cargo.lock') }}
@@ -101,40 +107,37 @@ jobs:
       - name: Run tests
         run: cargo test --workspace --all-features --all-targets
 
-  document:
-    if: github.event_name == 'push'
+      - name: Build docs
+        run: |
+          cargo clean --doc && \
+          cargo rustdoc -p test-casing-macro -- -D warnings --cfg docsrs && \
+          cargo rustdoc -p test-casing --features=tracing -- -D warnings --cfg docsrs
+      - name: Setup Pages
+        id: pages
+        uses: actions/configure-pages@v5
+        if: github.event_name == 'push' && github.ref_type == 'branch'
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v4
+        if: github.event_name == 'push' && github.ref_type == 'branch'
+        with:
+          path: 'target/doc'
+
+  deploy-pages:
     needs:
       - build
       - build-msrv
       - build-nightly
+    if: github.event_name == 'push' && github.ref_type == 'branch'
     permissions:
-      contents: write
+      pages: write
+      id-token: write
+
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ env.nightly }}
-
-      - name: Cache cargo build
-        uses: actions/cache@v4
-        with:
-          path: target
-          key: ${{ runner.os }}-document-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-document-cargo
-
-      - name: Build docs
-        run: |
-          cargo clean --doc && \
-          cargo rustdoc -p test-casing-macro -- --cfg docsrs && \
-          cargo rustdoc -p test-casing --features=tracing -- --cfg docsrs
-
-      - name: Deploy
-        uses: JamesIves/github-pages-deploy-action@v4
-        with:
-          branch: gh-pages
-          folder: target/doc
-          single-commit: true
+      - name: Deploy to Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

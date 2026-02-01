@@ -39,6 +39,9 @@ tracing = ["dep:tracing", "dep:tracing-subscriber"]
 # to include arguments in the names of the generated tests.
 nightly = ["test-casing-macro/nightly", "dep:once_cell"]
 
+[lints]
+workspace = true
+
 [[test]]
 name = "traces"
 required-features = ["tracing"]

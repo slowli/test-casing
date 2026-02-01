@@ -80,7 +80,7 @@ pub(crate) struct NightlyData {
 }
 
 impl NightlyData {
-    pub fn from_attrs(attrs: &mut Vec<Attribute>) -> syn::Result<Self> {
+    pub(crate) fn from_attrs(attrs: &mut Vec<Attribute>) -> syn::Result<Self> {
         let mut ignore = None;
         let mut should_panic = None;
         let mut indices_to_remove = vec![];
@@ -103,7 +103,7 @@ impl NightlyData {
         })
     }
 
-    pub fn macro_args(&self) -> impl ToTokens {
+    pub(crate) fn macro_args(&self) -> impl ToTokens {
         let option = quote!(::core::option::Option);
         let ignore = self.ignore.as_ref().map(|ignore| match ignore {
             AttrValue::Empty => quote!(ignore: #option::None,),

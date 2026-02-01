@@ -29,3 +29,6 @@ default = []
 # Uses custom test frameworks APIs together with a generous spicing of hacks
 # to include arguments in the names of the generated tests.
 nightly = ["proc-macro2/span-locations"]
+
+[lints]
+workspace = true
