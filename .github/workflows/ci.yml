@@ -31,6 +31,8 @@ jobs:
 
       - name: Build workspace
         run: cargo build --workspace --all-targets
+      - name: Build library (tracing)
+        run: cargo build -p test-casing --features=tracing --all-targets
       - name: Run doc tests
         run: cargo test --workspace --doc
 
@@ -62,11 +64,13 @@ jobs:
         run: cargo fmt --all -- --check --config imports_granularity=Crate --config group_imports=StdExternalCrate
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Clippy library (tracing)
+        run: cargo clippy -p test-casing --features=tracing --all-targets -- -D warnings
       - name: Check dependencies
-        run: cargo deny check
+        run: cargo deny --workspace --all-features check
 
       - name: Run tests
-        run: cargo test --workspace --all-targets
+        run: cargo test --workspace --features=tracing --all-targets
       - name: Run doc tests
         run: cargo test --workspace --doc
 
@@ -89,8 +93,10 @@ jobs:
           key: ${{ runner.os }}-nightly-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-nightly-cargo
 
-      - name: Clippy
+      - name: Clippy (all features)
         run: cargo clippy --workspace --all-features --all-targets -- -D warnings
+      - name: Clippy (no tracing)
+        run: cargo clippy -p test-casing --features=nightly --all-targets -- -D warnings
 
       - name: Run tests
         run: cargo test --workspace --all-features --all-targets
@@ -124,7 +130,7 @@ jobs:
         run: |
           cargo clean --doc && \
           cargo rustdoc -p test-casing-macro -- --cfg docsrs && \
-          cargo rustdoc -p test-casing -- --cfg docsrs
+          cargo rustdoc -p test-casing --features=tracing -- --cfg docsrs
 
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4

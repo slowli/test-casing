@@ -106,18 +106,15 @@ fn create_wrapper() -> FunctionWrapper {
 #[test]
 fn computing_arg_names() {
     let wrapper = create_wrapper();
-    let arg_names = wrapper.arg_names();
-    let arg_names: Item = syn::parse_quote!(#arg_names);
-    let expected: Item = syn::parse_quote! {
-        const __ARG_NAMES: [&'static str; 2usize] = ["number", "s",];
-    };
-    assert_eq!(arg_names, expected, "{}", quote!(#arg_names));
+    let arg_names: Vec<_> = wrapper.arg_names().collect();
+    assert_eq!(arg_names, ["number", "s"]);
 }
 
 #[test]
 fn computing_case_bindings() {
     let wrapper = create_wrapper();
-    let (case_binding, case_args) = wrapper.case_binding();
+    let (arg_idents, case_args) = wrapper.case_binding();
+    let case_binding = FunctionWrapper::group_idents(&arg_idents);
     let case_binding: Pat = syn::parse_quote!(#case_binding);
     let expected: Pat = syn::parse_quote!((__case_arg0, __case_arg1,));
     assert_eq!(case_binding, expected, "{}", quote!(#case_binding));
@@ -137,7 +134,8 @@ fn generating_case() {
 
     let expected: ItemFn = syn::parse_quote! {
         fn case0() {
-            let (__case_arg0, __case_arg1,) = test_casing::case(CASES, 0usize);
+            let (__case_arg0 , __case_arg1,) = ::test_casing::_private::case(CASES, 0usize);
+            let __guard = ::test_casing::__describe_test_case!(tested_fn, 0usize, "number" = __case_arg0, "s" = __case_arg1,);
             tested_fn(__case_arg0, &__case_arg1,);
         }
     };
@@ -155,13 +153,9 @@ fn generating_case() {
     let expected: ItemFn = syn::parse_quote! {
         #[::core::prelude::v1::test]
         fn case0() {
-            let __case = test_casing::case(CASES, 0usize);
-            println!(
-                "Testing case #{}: {}",
-                0usize,
-                test_casing::ArgNames::print_with_args(__ARG_NAMES, &__case)
-            );
+            let __case = ::test_casing::_private::case(CASES, 0usize);
             let (__case_arg0, __case_arg1,) = __case;
+            let __guard = ::test_casing::__describe_test_case!(tested_fn, 0usize, "number" = __case_arg0, "s" = __case_arg1,);
             tested_fn(__case_arg0, &__case_arg1,);
         }
     };

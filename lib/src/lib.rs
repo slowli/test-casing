@@ -104,11 +104,19 @@
 //! the feature may break. See [the CI config] for the nightly toolchain version the crate
 //! is tested against.
 //!
+//! ## `tracing`
+//!
+//! *(Off by default)*
+//!
+//! Enables tracing / logging using [the `tracing` library](https://docs.rs/tracing/). This includes
+//! the [`Trace`](decorators::Trace) decorator.
+//!
 //! [custom test frameworks]: https://github.com/rust-lang/rust/issues/50297
 //! [the CI config]: https://github.com/slowli/test-casing/blob/main/.github/workflows/ci.yml
 
 #![cfg_attr(feature = "nightly", feature(custom_test_frameworks, test))]
 // Documentation settings
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc(html_root_url = "https://docs.rs/test-casing/0.1.3")]
 // Linter settings
 #![warn(missing_debug_implementations, missing_docs, bare_trait_objects)]
@@ -410,10 +418,122 @@ pub use test_casing_macro::decorate;
 /// ```
 pub use test_casing_macro::test_casing;
 
+#[cfg(any(feature = "nightly", not(feature = "tracing")))]
+mod arg_names;
 pub mod decorators;
 #[cfg(feature = "nightly")]
 #[doc(hidden)] // used by the `#[test_casing]` macro; logically private
 pub mod nightly;
 mod test_casing;
 
-pub use crate::test_casing::{assert_case_count, case, ArgNames, Product, ProductIter, TestCases};
+pub use crate::test_casing::{Product, ProductIter, TestCases};
+
+#[doc(hidden)] // only should be used by proc macros
+pub mod _private {
+    #[cfg(feature = "tracing")]
+    pub use tracing::{info, info_span};
+
+    #[cfg(not(feature = "tracing"))]
+    pub use crate::arg_names::ArgNames;
+    pub use crate::test_casing::{assert_case_count, case};
+
+    #[cfg(not(feature = "tracing"))]
+    #[macro_export]
+    #[doc(hidden)] // Used in the proc macros; logically private
+    macro_rules! __describe_test_case {
+        ($name:tt, $index:tt, $arg:tt = $val:expr,) => {
+            ::std::println!(
+                "Testing case #{}: {}",
+                $index,
+                $crate::_private::ArgNames::print_with_args([$arg], $val)
+            );
+        };
+        ($name:tt, $index:tt, $($arg:tt = $val:expr,)+) => {
+            ::std::println!(
+                "Testing case #{}: {}",
+                $index,
+                $crate::_private::ArgNames::print_with_args([$($arg,)+], ($(&$val,)+))
+            );
+        };
+    }
+
+    /// Strips the repeating module name at the end of `path`.
+    #[cfg(feature = "tracing")]
+    pub const fn parent_module(path: &'static str, test_name: &'static str) -> &'static str {
+        const fn str_eq(x: &str, y: &str) -> bool {
+            if x.len() != y.len() {
+                return false;
+            }
+
+            let x = x.as_bytes();
+            let y = y.as_bytes();
+            let mut i = 0;
+            while i < x.len() {
+                if x[i] != y[i] {
+                    return false;
+                }
+                i += 1;
+            }
+
+            true
+        }
+
+        let Some((head, test_module)) = split_last(path) else {
+            return path;
+        };
+
+        if str_eq(test_module, test_name) {
+            head
+        } else {
+            path
+        }
+    }
+
+    #[cfg(feature = "tracing")]
+    const fn split_last(path: &str) -> Option<(&str, &str)> {
+        let path_bytes = path.as_bytes();
+        let mut i = path_bytes.len().checked_sub(1);
+        let mut found = None;
+        while let Some(pos) = i {
+            if path_bytes[pos] == b':' && path_bytes[pos + 1] == b':' {
+                found = Some(pos);
+                break;
+            }
+            i = pos.checked_sub(1);
+        }
+
+        if let Some(pos) = found {
+            let (head_bytes, tail_bytes) = path_bytes.split_at(pos);
+            let (_, tail_bytes) = tail_bytes.split_at(2); // remove `::` at the start
+            Some(unsafe {
+                // SAFETY: `path_bytes` is a valid UTF-8 string, and we split it at a char boundary.
+                (
+                    core::str::from_utf8_unchecked(head_bytes),
+                    core::str::from_utf8_unchecked(tail_bytes),
+                )
+            })
+        } else {
+            None
+        }
+    }
+
+    #[cfg(feature = "tracing")]
+    #[macro_export]
+    #[doc(hidden)] // Used in the proc macros; logically private
+    macro_rules! __describe_test_case {
+        ($name:tt, $index:tt, $($arg:tt = $val:expr,)+) => {{
+            const TARGET: &'static str = $crate::_private::parent_module(::core::module_path!(), ::core::stringify!($name));
+
+            let _guard = $crate::_private::info_span!(
+                target: TARGET,
+                ::core::stringify!($name),
+                case.index = $index,
+                $($arg = ?$val,)+
+            )
+            .entered();
+
+            $crate::_private::info!(target: TARGET, "started test");
+            _guard
+        }}
+    }
+}

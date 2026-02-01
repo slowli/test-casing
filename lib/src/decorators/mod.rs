@@ -15,8 +15,7 @@
 //! See [`decorate`](crate::decorate) macro docs for the examples of usage.
 
 use std::{
-    any::Any,
-    fmt, panic,
+    any, fmt, panic,
     sync::{
         mpsc::{self, RecvTimeoutError},
         Mutex, PoisonError,
@@ -24,6 +23,12 @@ use std::{
     thread,
     time::Duration,
 };
+
+#[cfg(feature = "tracing")]
+pub use self::traces::Trace;
+
+#[cfg(feature = "tracing")]
+mod traces;
 
 /// Tested function or closure.
 ///
@@ -75,7 +80,7 @@ impl<R, F> TestFn<R> for F where F: Fn() -> R + panic::UnwindSafe + Send + Sync 
 ///     Err("oops, this test failed".into())
 /// }
 /// ```
-pub trait DecorateTest<R>: panic::RefUnwindSafe + Send + Sync + 'static {
+pub trait DecorateTest<R>: panic::RefUnwindSafe + Send + Sync + 'static + fmt::Debug {
     /// Decorates the provided test function and runs the test.
     fn decorate_and_test<F: TestFn<R>>(&'static self, test_fn: F) -> R;
 }
@@ -88,13 +93,17 @@ impl<R, T: DecorateTest<R>> DecorateTest<R> for &'static T {
 
 /// Object-safe version of [`DecorateTest`].
 #[doc(hidden)] // used in the `decorate` proc macro; logically private
-pub trait DecorateTestFn<R>: panic::RefUnwindSafe + Send + Sync + 'static {
+pub trait DecorateTestFn<R>: panic::RefUnwindSafe + Send + Sync + 'static + fmt::Debug {
     fn decorate_and_test_fn(&'static self, test_fn: fn() -> R) -> R;
 }
 
 impl<R: 'static, T: DecorateTest<R>> DecorateTestFn<R> for T {
     fn decorate_and_test_fn(&'static self, test_fn: fn() -> R) -> R {
-        self.decorate_and_test(test_fn)
+        self.decorate_and_test(move || {
+            #[cfg(feature = "tracing")]
+            tracing::info!(decorators = ?self, "running decorated test");
+            test_fn()
+        })
     }
 }
 
@@ -198,11 +207,17 @@ impl Retry {
         }
     }
 
-    fn handle_panic(&self, attempt: usize, panic_object: Box<dyn Any + Send>) {
+    fn handle_panic(&self, attempt: usize, panic_object: Box<dyn any::Any + Send>) {
         if attempt < self.times {
-            let panic_str = extract_panic_str(&panic_object).unwrap_or("");
-            let punctuation = if panic_str.is_empty() { "" } else { ": " };
-            println!("Test attempt #{attempt} panicked{punctuation}{panic_str}");
+            let panic_str = extract_panic_str(panic_object.as_ref()).unwrap_or("");
+
+            #[cfg(not(feature = "tracing"))]
+            println!(
+                "Test attempt #{attempt} panicked{punctuation}{panic_str}",
+                punctuation = if panic_str.is_empty() { "" } else { ": " }
+            );
+            #[cfg(feature = "tracing")]
+            tracing::warn!(panic = panic_str, "test attempt panicked");
         } else {
             panic::resume_unwind(panic_object);
         }
@@ -214,12 +229,19 @@ impl Retry {
         should_retry: fn(&E) -> bool,
     ) -> Result<(), E> {
         for attempt in 0..=self.times {
+            #[cfg(not(feature = "tracing"))]
             println!("Test attempt #{attempt}");
+            #[cfg(feature = "tracing")]
+            let _span_guard = tracing::info_span!("test_attempt", attempt).entered();
+
             match panic::catch_unwind(test_fn) {
                 Ok(Ok(())) => return Ok(()),
                 Ok(Err(err)) => {
                     if attempt < self.times && should_retry(&err) {
+                        #[cfg(not(feature = "tracing"))]
                         println!("Test attempt #{attempt} errored: {err}");
+                        #[cfg(feature = "tracing")]
+                        tracing::warn!(%err, "test attempt errored");
                     } else {
                         return Err(err);
                     }
@@ -239,7 +261,11 @@ impl Retry {
 impl DecorateTest<()> for Retry {
     fn decorate_and_test<F: TestFn<()>>(&self, test_fn: F) {
         for attempt in 0..=self.times {
+            #[cfg(not(feature = "tracing"))]
             println!("Test attempt #{attempt}");
+            #[cfg(feature = "tracing")]
+            let _span_guard = tracing::info_span!("test_attempt", attempt).entered();
+
             match panic::catch_unwind(test_fn) {
                 Ok(()) => break,
                 Err(panic_object) => {
@@ -262,7 +288,7 @@ impl<E: fmt::Display> DecorateTest<Result<(), E>> for Retry {
     }
 }
 
-fn extract_panic_str(panic_object: &(dyn Any + Send)) -> Option<&str> {
+fn extract_panic_str(panic_object: &(dyn any::Any + Send)) -> Option<&str> {
     if let Some(panic_str) = panic_object.downcast_ref::<&'static str>() {
         Some(panic_str)
     } else if let Some(panic_string) = panic_object.downcast_ref::<String>() {
@@ -372,7 +398,11 @@ impl Sequence {
     ) -> R {
         let mut guard = self.failed.lock().unwrap_or_else(PoisonError::into_inner);
         if *guard && self.abort_on_failure {
+            #[cfg(not(feature = "tracing"))]
             println!("Skipping test because a previous test in the same sequence has failed");
+            #[cfg(feature = "tracing")]
+            tracing::info!("skipping test because a previous test in the same sequence has failed");
+
             return ok_value;
         }
 
@@ -594,5 +624,23 @@ mod tests {
         static DECORATORS: &dyn DecorateTestFn<()> = &(&SEQUENCE,);
 
         DECORATORS.decorate_and_test_fn(|| {});
+    }
+
+    #[test]
+    fn extracting_panic() {
+        let value = 0;
+        let panic_obj = panic::catch_unwind(|| {
+            assert!(value > 1, "what");
+        })
+        .unwrap_err();
+
+        assert_eq!(extract_panic_str(panic_obj.as_ref()), Some("what"));
+
+        let panic_obj = panic::catch_unwind(|| {
+            assert!(value > 1, "what: {value}");
+        })
+        .unwrap_err();
+
+        assert_eq!(extract_panic_str(panic_obj.as_ref()), Some("what: 0"));
     }
 }
