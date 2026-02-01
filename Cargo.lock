@@ -574,7 +574,7 @@ dependencies = [
 
 [[package]]
 name = "test-casing"
-version = "0.1.3"
+version = "0.2.0-beta.1"
 dependencies = [
  "doc-comment",
  "once_cell",
@@ -590,7 +590,7 @@ dependencies = [
 
 [[package]]
 name = "test-casing-macro"
-version = "0.1.3"
+version = "0.2.0-beta.1"
 dependencies = [
  "assert_matches",
  "proc-macro2",

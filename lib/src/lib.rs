@@ -117,7 +117,7 @@
 #![cfg_attr(feature = "nightly", feature(custom_test_frameworks, test))]
 // Documentation settings
 #![cfg_attr(docsrs, feature(doc_cfg))]
-#![doc(html_root_url = "https://docs.rs/test-casing/0.1.3")]
+#![doc(html_root_url = "https://docs.rs/test-casing/0.2.0-beta.1")]
 
 /// Wraps a tested function to add retries, timeouts etc.
 ///

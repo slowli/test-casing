@@ -16,7 +16,7 @@ Add this to your `Crate.toml`:
 
 ```toml
 [dev-dependencies]
-test-casing-macro = "0.1.3"
+test-casing-macro = "0.2.0-beta.1"
 ```
 
 Note that the `test-casing` crate re-exports the proc macros from this crate. 

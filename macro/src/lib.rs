@@ -8,7 +8,7 @@
 //! [`test-casing`]: https://docs.rs/test-casing/
 
 // Documentation settings
-#![doc(html_root_url = "https://docs.rs/test-casing-macro/0.1.3")]
+#![doc(html_root_url = "https://docs.rs/test-casing-macro/0.2.0-beta.1")]
 #![allow(missing_docs)] // The macros are documented in the main crate
 
 extern crate proc_macro;

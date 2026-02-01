@@ -3,7 +3,7 @@ members = ["lib", "macro"]
 resolver = "2"
 
 [workspace.package]
-version = "0.1.3"
+version = "0.2.0-beta.1"
 edition = "2021"
 rust-version = "1.82"
 authors = ["Alex Ostrovski <ostrovski.alex@gmail.com>"]
@@ -28,7 +28,7 @@ version-sync = "0.9.4"
 
 # Workspace dependencies
 # We use the exact version to not bother with compatibility of internal items used by proc macros.
-test-casing-macro = { version = "=0.1.3", path = "macro" }
+test-casing-macro = { version = "=0.2.0-beta.1", path = "macro" }
 
 [workspace.lints.rust]
 missing_docs = "warn"
