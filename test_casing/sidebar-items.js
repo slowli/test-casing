@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"attr":["decorate","test_casing"],"macro":["cases"],"mod":["decorators"],"struct":["Product","ProductIter","TestCases"]};

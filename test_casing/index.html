@@ -1,0 +1,84 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Minimalistic testing framework for generating tests for a given set of test cases and decorating them to add retries, timeouts, sequential test processing etc. In other words, the framework implements:"><title>test_casing - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-ca0dd0c4.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="test_casing" data-themes="" data-resource-suffix="" data-rustdoc-version="1.93.0-nightly (bd3ac0330 2025-11-01)" data-channel="nightly" data-search-js="search-5c29b3b5.js" data-stringdex-js="stringdex-c3e638e9.js" data-settings-js="settings-c38705f0.js" ><script src="../static.files/storage-e2aeef58.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-ce535bd0.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-263c88ec.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-044be391.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Crate test_casing</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../test_casing/index.html">test_<wbr>casing</a><span class="version">0.1.3</span></h2></div><div class="sidebar-elems"><ul class="block"><li><a id="all-types" href="all.html">All Items</a></li></ul><section id="rustdoc-toc"><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#overview" title="Overview">Overview</a><ul><li><a href="#test-cases" title="Test cases">Test cases</a></li><li><a href="#test-decorators" title="Test decorators">Test decorators</a></li></ul></li><li><a href="#test-cases-structure" title="Test cases structure">Test cases structure</a></li><li><a href="#alternatives-and-similar-tools" title="Alternatives and similar tools">Alternatives and similar tools</a></li><li><a href="#crate-features" title="Crate features">Crate features</a><ul><li><a href="#nightly" title="`nightly`"><code>nightly</code></a></li><li><a href="#tracing" title="`tracing`"><code>tracing</code></a></li></ul></li></ul><h3><a href="#modules">Crate Items</a></h3><ul class="block"><li><a href="#modules" title="Modules">Modules</a></li><li><a href="#macros" title="Macros">Macros</a></li><li><a href="#structs" title="Structs">Structs</a></li><li><a href="#attributes" title="Attribute Macros">Attribute Macros</a></li></ul></section><div id="rustdoc-modnav"></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content"><div class="main-heading"><h1>Crate <span>test_<wbr>casing</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/test_casing/lib.rs.html#1-539">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Minimalistic testing framework for generating tests for a given set of test cases
+and decorating them to add retries, timeouts, sequential test processing etc. In other words,
+the framework implements:</p>
+<ul>
+<li>Parameterized tests of reasonably low cardinality for the standard Rust test runner</li>
+<li>Fully code-based, composable and extensible test decorators.</li>
+</ul>
+<h2 id="overview"><a class="doc-anchor" href="#overview">§</a>Overview</h2><h3 id="test-cases"><a class="doc-anchor" href="#test-cases">§</a>Test cases</h3>
+<p><a href="attr.test_casing.html" title="attr test_casing::test_casing"><code>test_casing</code></a> attribute macro wraps a free-standing function
+with one or more arguments and transforms it into a collection of test cases.
+The arguments to the function are supplied by an iterator (more precisely,
+an expression implementing <a href="https://doc.rust-lang.org/nightly/core/iter/traits/collect/trait.IntoIterator.html" title="trait core::iter::traits::collect::IntoIterator"><code>IntoIterator</code></a>).</p>
+<p>For convenience, there is <a href="struct.TestCases.html" title="struct test_casing::TestCases"><code>TestCases</code></a>, a lazy iterator wrapper that allows constructing
+test cases which cannot be constructed in compile time (e.g., ones requiring access to heap).
+<a href="struct.TestCases.html" title="struct test_casing::TestCases"><code>TestCases</code></a> can be instantiated using the <a href="macro.cases.html" title="macro test_casing::cases"><code>cases!</code></a> macro.</p>
+<p>Since a separate test wrapper is generated for each case, their number should be
+reasonably low (roughly speaking, no more than 20).
+Isolating each test case makes most sense if the cases involve some heavy lifting
+(spinning up a runtime, logging considerable amount of information, etc.).</p>
+<h3 id="test-decorators"><a class="doc-anchor" href="#test-decorators">§</a>Test decorators</h3>
+<p><a href="attr.decorate.html" title="attr test_casing::decorate"><code>decorate</code></a> attribute macro can be placed on a test function to add generic functionality,
+such as retries, timeouts or running tests in a sequence.</p>
+<p>The <a href="decorators/index.html" title="mod test_casing::decorators"><code>decorators</code></a> module defines some basic decorators and the
+<a href="decorators/trait.DecorateTest.html" title="trait test_casing::decorators::DecorateTest"><code>DecorateTest</code></a> trait allowing to define custom decorators.
+Test decorators support async tests, tests returning <code>Result</code>s and test cases; see
+the module docs for more details.</p>
+<h2 id="test-cases-structure"><a class="doc-anchor" href="#test-cases-structure">§</a>Test cases structure</h2>
+<p>The generated test cases are placed in a module with the same name as the target function
+near the function.
+This allows specifying the (potentially qualified) function name to restrict the test scope.</p>
+<p>If the <a href="#nightly"><code>nightly</code> crate feature</a> is not enabled, names of particular test cases
+are not descriptive; they have the <code>case_NN</code> format, where <code>NN</code> is the 0-based case index.
+The values of arguments provided to the test are printed to the standard output
+at the test start. (The standard output is captured and thus may be not visible
+unless the <code>--nocapture</code> option is specified in the <code>cargo test</code> command.)</p>
+<p>If the <code>nightly</code> feature <em>is</em> enabled, the names are more descriptive, containing <a href="https://doc.rust-lang.org/nightly/core/fmt/macros/derive.Debug.html" title="derive core::fmt::macros::Debug"><code>Debug</code></a>
+presentation of all args together with their names. Here’s an excerpt from the integration
+tests for this crate:</p>
+<div class="example-wrap"><pre class="language-text"><code>test number_can_be_converted_to_string::case_1 [number = 3, expected = &quot;3&quot;] ... ok
+test number_can_be_converted_to_string::case_2 [number = 5, expected = &quot;5&quot;] ... ok
+test numbers_are_large::case_0 [number = 2] ... ignored, testing that `#[ignore]` attr works
+test numbers_are_large::case_1 [number = 3] ... ignored, testing that `#[ignore]` attr works
+test string_conversion_fail::case_0 [bogus_str = &quot;not a number&quot;] - should panic ... ok
+test string_conversion_fail::case_1 [bogus_str = &quot;-&quot;] - should panic ... ok
+test string_conversion_fail::case_2 [bogus_str = &quot;&quot;] - should panic ... ok</code></pre></div>
+<p>The names are fully considered when filtering tests, meaning that it’s possible to run
+particular cases using a filter like <code>cargo test 'number = 5'</code>.</p>
+<h2 id="alternatives-and-similar-tools"><a class="doc-anchor" href="#alternatives-and-similar-tools">§</a>Alternatives and similar tools</h2>
+<ul>
+<li>The approach to test casing from this crate can be reproduced with some amount of copy-pasting
+by manually feeding necessary inputs to a common parametric testing function.
+Optionally, these tests may be collected in a module for better structuring.
+The main downside of this approach is the amount of copy-pasting.</li>
+<li>Alternatively, multiple test cases may be run in a single <code>#[test]</code> (e.g., in a loop).
+This is fine for the large amount of small cases (e.g., mini-fuzzing), but may have downsides
+such as overflowing or overlapping logs and increased test runtimes.</li>
+<li>The <a href="https://docs.rs/test-case/"><code>test-case</code></a> crate uses a similar approach to test case structuring, but differs
+in how test case inputs are specified. Subjectively, the approach used by this crate
+is more extensible and easier to read.</li>
+<li><a href="https://docs.rs/proptest/">Property testing</a> / <a href="https://docs.rs/quickcheck/"><code>quickcheck</code></a>-like frameworks provide much more exhaustive approach
+to parameterized testing, but they require significantly more setup effort.</li>
+<li><a href="https://crates.io/crates/rstest"><code>rstest</code></a> supports test casing and some of the test decorators (e.g., timeouts).</li>
+<li><a href="https://nexte.st/"><code>nextest</code></a> is an alternative test runner that supports most of the test decorators
+defined in the <a href="decorators/index.html" title="mod test_casing::decorators"><code>decorators</code></a> module. It does not use code-based decorator config and
+does not allow for custom decorator.</li>
+</ul>
+<h2 id="crate-features"><a class="doc-anchor" href="#crate-features">§</a>Crate features</h2><h3 id="nightly"><a class="doc-anchor" href="#nightly">§</a><code>nightly</code></h3>
+<p><em>(Off by default)</em></p>
+<p>Uses <a href="https://github.com/rust-lang/rust/issues/50297">custom test frameworks</a> APIs together with a generous spicing of hacks
+to include arguments in the names of the generated tests (see an excerpt above
+for an illustration). <code>test_casing</code> actually does not require a custom test runner,
+but rather hacks into the standard one; thus, the generated test cases can run alongside with
+ordinary / non-parameterized tests.</p>
+<p>Requires a nightly Rust toolchain and specifying <code>#![feature(test, custom_test_frameworks)]</code>
+in the using crate. Because <code>custom_test_frameworks</code> APIs may change between toolchain releases,
+the feature may break. See <a href="https://github.com/slowli/test-casing/blob/main/.github/workflows/ci.yml">the CI config</a> for the nightly toolchain version the crate
+is tested against.</p>
+<h3 id="tracing"><a class="doc-anchor" href="#tracing">§</a><code>tracing</code></h3>
+<p><em>(Off by default)</em></p>
+<p>Enables tracing / logging using <a href="https://docs.rs/tracing/">the <code>tracing</code> library</a>. This includes
+the <a href="decorators/struct.Trace.html" title="struct test_casing::decorators::Trace"><code>Trace</code></a> decorator.</p>
+</div></details><h2 id="modules" class="section-header">Modules<a href="#modules" class="anchor">§</a></h2><dl class="item-table"><dt><a class="mod" href="decorators/index.html" title="mod test_casing::decorators">decorators</a></dt><dd>Test decorator trait and implementations.</dd></dl><h2 id="macros" class="section-header">Macros<a href="#macros" class="anchor">§</a></h2><dl class="item-table"><dt><a class="macro" href="macro.cases.html" title="macro test_casing::cases">cases</a></dt><dd>Creates <a href="struct.TestCases.html" title="struct test_casing::TestCases"><code>TestCases</code></a> based on the provided expression implementing <a href="https://doc.rust-lang.org/nightly/core/iter/traits/collect/trait.IntoIterator.html" title="trait core::iter::traits::collect::IntoIterator"><code>IntoIterator</code></a>
+(e.g., an array, a range or an iterator).</dd></dl><h2 id="structs" class="section-header">Structs<a href="#structs" class="anchor">§</a></h2><dl class="item-table"><dt><a class="struct" href="struct.Product.html" title="struct test_casing::Product">Product</a></dt><dd>Cartesian product of several test cases.</dd><dt><a class="struct" href="struct.ProductIter.html" title="struct test_casing::ProductIter">Product<wbr>Iter</a></dt><dd>Iterator over test cases in <a href="struct.Product.html" title="struct test_casing::Product"><code>Product</code></a>.</dd><dt><a class="struct" href="struct.TestCases.html" title="struct test_casing::TestCases">Test<wbr>Cases</a></dt><dd>Container for test cases based on a lazily evaluated iterator. Should be constructed
+using the <a href="macro.cases.html" title="macro test_casing::cases"><code>cases!</code></a> macro.</dd></dl><h2 id="attributes" class="section-header">Attribute Macros<a href="#attributes" class="anchor">§</a></h2><dl class="item-table"><dt><a class="attr" href="attr.decorate.html" title="attr test_casing::decorate">decorate</a></dt><dd>Wraps a tested function to add retries, timeouts etc.</dd><dt><a class="attr" href="attr.test_casing.html" title="attr test_casing::test_casing">test_<wbr>casing</a></dt><dd>Flattens a parameterized test into a collection of test cases.</dd></dl></section></div></main></body></html>

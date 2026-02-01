@@ -1,0 +1,2 @@
+createSrcSidebar('[["test_casing",["",[["decorators",[],["mod.rs","traces.rs"]]],["lib.rs","test_casing.rs"]]],["test_casing_macro",["",[["test_casing",[],["mod.rs"]]],["decorate.rs","lib.rs"]]]]');
+//{"start":19,"fragment_lengths":[91,84]}
