@@ -5,4 +5,9 @@ error[E0425]: cannot find value `CASS` in this scope
   | --------------------------------------------- similarly named constant `CASES` defined here
 4 |
 5 | #[test_casing(2, CASS)]
-  |                  ^^^^ help: a constant with a similar name exists: `CASES`
+  |                  ^^^^
+  |
+help: a constant with a similar name exists
+  |
+5 | #[test_casing(2, CASES)]
+  |                     +
