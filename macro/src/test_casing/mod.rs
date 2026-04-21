@@ -3,13 +3,13 @@
 use std::{fmt, mem};
 
 use proc_macro::TokenStream;
-use quote::{quote, ToTokens};
+use quote::{ToTokens, quote};
 use syn::{
+    Attribute, Expr, FnArg, Ident, Item, ItemFn, LitInt, Pat, PatType, Path, ReturnType, Signature,
+    Token,
     ext::IdentExt,
     parse::{Error as SynError, Parse, ParseStream},
     spanned::Spanned,
-    Attribute, Expr, FnArg, Ident, Item, ItemFn, LitInt, Pat, PatType, Path, ReturnType, Signature,
-    Token,
 };
 
 #[cfg(feature = "nightly")]
@@ -429,7 +429,7 @@ impl FunctionWrapper {
         }
     }
 
-    fn group_idents(arg_idents: &[Ident]) -> impl ToTokens {
+    fn group_idents(arg_idents: &[Ident]) -> impl ToTokens + use<> {
         if arg_idents.len() == 1 {
             let arg = &arg_idents[0];
             quote!(#arg)

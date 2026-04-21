@@ -2,7 +2,7 @@
 
 use std::error::Error;
 
-use test_casing::{cases, test_casing, Product, TestCases};
+use test_casing::{Product, TestCases, cases, test_casing};
 
 // Cases can be reused across multiple tests.
 const CASES: TestCases<i32> = cases!([2, 3, 5, 8]);
@@ -101,8 +101,8 @@ fn unit_test_detection_works() {
 mod random {
     use std::iter;
 
-    use rand::{rngs::StdRng, RngExt, SeedableRng};
-    use test_casing::{cases, test_casing, TestCases};
+    use rand::{RngExt, SeedableRng, rngs::StdRng};
+    use test_casing::{TestCases, cases, test_casing};
 
     // The library can be used for randomized tests as well, but it's probably not the best choice
     // if the number of test cases should be large.

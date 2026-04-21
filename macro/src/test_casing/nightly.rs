@@ -2,8 +2,8 @@
 
 use std::fmt;
 
-use quote::{quote, ToTokens};
-use syn::{parse::Error as SynError, Attribute, Expr, ExprLit, Lit, Meta, MetaList, MetaNameValue};
+use quote::{ToTokens, quote};
+use syn::{Attribute, Expr, ExprLit, Lit, Meta, MetaList, MetaNameValue, parse::Error as SynError};
 
 pub(crate) enum AttrValue {
     Empty,
