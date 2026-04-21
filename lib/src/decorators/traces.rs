@@ -2,12 +2,12 @@
 
 use std::{env, fmt};
 
-use tracing::{level_filters::LevelFilter, Dispatch, Event, Subscriber};
+use tracing::{Dispatch, Event, Subscriber, level_filters::LevelFilter};
 use tracing_subscriber::{
-    field::RecordFields,
-    fmt::{format, format::Writer, FmtContext, FormatEvent, FormatFields, TestWriter},
-    registry::LookupSpan,
     EnvFilter, FmtSubscriber,
+    field::RecordFields,
+    fmt::{FmtContext, FormatEvent, FormatFields, TestWriter, format, format::Writer},
+    registry::LookupSpan,
 };
 
 use crate::decorators::{DecorateTest, TestFn};

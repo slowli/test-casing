@@ -5,10 +5,10 @@ use std::fmt;
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{
+    Error as SynError, Expr, Item, ItemFn, ReturnType, Token,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
     spanned::Spanned,
-    Error as SynError, Expr, Item, ItemFn, ReturnType, Token,
 };
 
 struct DecorateAttrs {

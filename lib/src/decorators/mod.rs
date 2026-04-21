@@ -17,8 +17,8 @@
 use std::{
     any, fmt, panic,
     sync::{
-        mpsc::{self, RecvTimeoutError},
         Mutex, PoisonError,
+        mpsc::{self, RecvTimeoutError},
     },
     thread,
     time::Duration,
@@ -462,8 +462,8 @@ mod tests {
     use std::{
         io,
         sync::{
-            atomic::{AtomicU32, Ordering},
             Mutex,
+            atomic::{AtomicU32, Ordering},
         },
         time::Instant,
     };

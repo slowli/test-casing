@@ -114,6 +114,7 @@
 //! [custom test frameworks]: https://github.com/rust-lang/rust/issues/50297
 //! [the CI config]: https://github.com/slowli/test-casing/blob/main/.github/workflows/ci.yml
 
+#![cfg_attr(feature = "nightly", allow(unused_features))] // `custom_test_frameworks` is unused in newer nightly toolchains
 #![cfg_attr(feature = "nightly", feature(custom_test_frameworks, test))]
 // Documentation settings
 #![cfg_attr(docsrs, feature(doc_cfg))]
