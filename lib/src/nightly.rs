@@ -2,12 +2,12 @@
 
 extern crate test;
 
-use std::{fmt, ops};
+use std::{fmt, ops, sync::LazyLock};
 
-use once_cell::sync::Lazy;
 pub use test::assert_test_result;
 use test::{ShouldPanic, TestDesc, TestFn, TestName, TestType};
-pub type LazyTestCase = Lazy<TestDescAndFn>;
+
+pub type LazyTestCase = LazyLock<TestDescAndFn>;
 
 // Wrapper to overcome `!Sync` for `TestDescAndFn` caused by dynamic `TestFn` variants.
 pub struct TestDescAndFn {
