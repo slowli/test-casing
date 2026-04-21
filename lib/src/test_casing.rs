@@ -49,7 +49,7 @@ pub fn assert_case_count(iter: impl IntoIterator, expected_count: usize) {
 ///
 /// // The `cases!` macro can wrap a statement block:
 /// const COMPLEX_CASES: TestCases<u32> = cases!({
-///     use rand::{rngs::StdRng, Rng, SeedableRng};
+///     use rand::{rngs::StdRng, RngExt, SeedableRng};
 ///
 ///     let mut rng = StdRng::seed_from_u64(123);
 ///     (0..5).map(move |_| rng.random())
