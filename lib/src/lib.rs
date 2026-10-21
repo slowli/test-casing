@@ -438,20 +438,20 @@ pub mod _private {
     #[macro_export]
     #[doc(hidden)] // Used in the proc macros; logically private
     macro_rules! __describe_test_case {
-        ($name:tt, $index:tt, $arg:tt = $val:expr,) => {
+        ($name:tt, $index:tt, $arg:tt = $val:expr,) => {{
             ::std::println!(
                 "Testing case #{}: {}",
                 $index,
                 $crate::_private::ArgNames::print_with_args([$arg], $val)
             );
-        };
-        ($name:tt, $index:tt, $($arg:tt = $val:expr,)+) => {
+        }};
+        ($name:tt, $index:tt, $($arg:tt = $val:expr,)+) => {{
             ::std::println!(
                 "Testing case #{}: {}",
                 $index,
                 $crate::_private::ArgNames::print_with_args([$($arg,)+], ($(&$val,)+))
             );
-        };
+        }};
     }
 
     /// Strips the repeating module name at the end of `path`.
